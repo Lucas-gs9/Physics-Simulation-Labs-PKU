@@ -6,7 +6,8 @@
 #include "Labs/Common/ImageRGB.h"
 #include "Labs/Common/OrbitCameraManager.h"
 #include "Labs/1-RigidBody/RigidBody.h"
-#include <optional>
+#include<optional>
+
 
 namespace VCX::Labs::RigidBody {
 

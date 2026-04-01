@@ -42,7 +42,7 @@ namespace VCX::Labs::RigidBody {
         glm::mat3 R = glm::mat3_cast(q);
         glm::mat3 I_inv = R * I_ref_inv * glm::transpose(R);
         w += I_inv * glm::cross(r, impulse);
-        glm::mat3 I = R * I_inv * glm::transpose(R);
+        glm::mat3 I = R * I_ref * glm::transpose(R);
         L           = I * w;
     }
 }

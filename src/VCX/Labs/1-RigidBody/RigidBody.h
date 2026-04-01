@@ -41,6 +41,7 @@ namespace VCX::Labs::RigidBody {
         std::shared_ptr<Shape> shape;
         glm::mat3              I_ref; // Inertia
         glm::mat3              I_ref_inv;
+        bool                   isStatic = false;
 
         glm::vec3              x { 0.f }; // position
         glm::quat              q { 1.f, 0.f, 0.f, 0.f }; // orientation
