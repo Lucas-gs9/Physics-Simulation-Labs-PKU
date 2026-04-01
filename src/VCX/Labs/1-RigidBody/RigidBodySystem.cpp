@@ -49,34 +49,32 @@ namespace VCX::Labs::RigidBody {
     void RigidBodySystem::CollisionDetect(int id1, int id2) {
         auto const & b0 = *bodies[id1];
         auto const & b1 = *bodies[id2];
-        if (b0.shape->GetType() == Shape::Type::Box && b1.shape->GetType() == Shape::Type::Box) {
-            using CollisionGeometryPtr_t = std::shared_ptr<fcl::CollisionGeometryf>;
-            auto shape0                  = std::static_pointer_cast<BoxShape>(b0.shape);
-            auto shape1                  = std::static_pointer_cast<BoxShape>(b1.shape);
-            CollisionGeometryPtr_t box_geometry_A          = std::make_shared<fcl::Boxf>(shape0->dim[0], shape0->dim[1], shape0->dim[2]);
-            CollisionGeometryPtr_t box_geometry_B          = std::make_shared<fcl::Boxf>(shape1->dim[0], shape1->dim[1], shape1->dim[2]);
 
-            fcl::CollisionObject<float>  box_A(box_geometry_A, fcl::Transform3f(Eigen::Translation3f(b0.x[0], b0.x[1], b0.x[2]) * Eigen::Quaternion(b0.q.w, b0.q.x, b0.q.y, b0.q.z)));
-            fcl::CollisionObject<float>  box_B(box_geometry_B, fcl::Transform3f(Eigen::Translation3f(b1.x[0], b1.x[1], b1.x[2]) * Eigen::Quaternion(b1.q.w, b1.q.x, b1.q.y, b1.q.z)));
-            fcl::CollisionRequest<float> collisionRequest(8, true);
-            fcl::CollisionResult<float>  collisionResult;
-            fcl::collide(&box_A, &box_B, collisionRequest, collisionResult);
-            if (! collisionResult.isCollision()) return;
-            std::vector<fcl::Contact<float>> f_contacts;
-            collisionResult.getContacts(f_contacts);
-            float weight = 1.0f / static_cast<float>(f_contacts.size());
+        using CollisionGeometryPtr_t          = std::shared_ptr<fcl::CollisionGeometryf>;
+        CollisionGeometryPtr_t geometry_A = CreateFCLGeometry(b0.shape);
+        CollisionGeometryPtr_t geometry_B = CreateFCLGeometry(b1.shape);
 
-            ContactInfo cur_contact { id1, id2, weight };
-            for (auto const & contact:f_contacts) {
-                cur_contact.pos_list.push_back({ contact.pos[0], contact.pos[1], contact.pos[2] });
-                cur_contact.c_pos += glm::vec3 { contact.pos[0], contact.pos[1], contact.pos[2] };
-                cur_contact.c_normal += glm::vec3 { contact.normal[0], contact.normal[1], contact.normal[2] };
-                cur_contact.depth = std::max(cur_contact.depth, contact.penetration_depth);
-            }
-            cur_contact.c_pos *= weight;
-            cur_contact.c_normal = glm::normalize(cur_contact.c_normal);
-            contacts.push_back(cur_contact);
+        fcl::CollisionObject<float>  obj_A(geometry_A, GetFCLTransform(b0));
+        fcl::CollisionObject<float>  obj_B(geometry_B, GetFCLTransform(b1));
+
+        fcl::CollisionRequest<float> collisionRequest(8, true);
+        fcl::CollisionResult<float>  collisionResult;
+        fcl::collide(&obj_A, &obj_B, collisionRequest, collisionResult);
+        if (! collisionResult.isCollision()) return;
+        std::vector<fcl::Contact<float>> f_contacts;
+        collisionResult.getContacts(f_contacts);
+        float weight = 1.0f / static_cast<float>(f_contacts.size());
+
+        ContactInfo cur_contact { id1, id2, weight };
+        for (auto const & contact : f_contacts) {
+            cur_contact.pos_list.push_back({ contact.pos[0], contact.pos[1], contact.pos[2] });
+            cur_contact.c_pos += glm::vec3 { contact.pos[0], contact.pos[1], contact.pos[2] };
+            cur_contact.c_normal += glm::vec3 { contact.normal[0], contact.normal[1], contact.normal[2] };
+            cur_contact.depth = std::max(cur_contact.depth, contact.penetration_depth);
         }
+        cur_contact.c_pos *= weight;
+        cur_contact.c_normal = glm::normalize(cur_contact.c_normal);
+        contacts.push_back(cur_contact);
     }
 
     glm::vec3 RigidBodySystem::GetCollisionImpulse(const ContactInfo& contact, float dt) {

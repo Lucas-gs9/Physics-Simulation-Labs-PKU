@@ -35,6 +35,22 @@ namespace VCX::Labs::RigidBody {
         }
     };
 
+    class SphereShape : public Shape {
+    public:
+        float radius;
+
+        SphereShape(float r):
+            radius(r) {}
+
+        Type GetType() const override { return Type::Sphere; }
+
+        glm::mat3 GetInertia(float mass) const override {
+            float i = (2.0f / 5.0f) * mass * radius * radius;
+            return glm::mat3(
+                i, 0, 0, 0, i, 0, 0, 0, i);
+        }
+    };
+
     class RigidBody {
     public:
         float                  m { 1.f };

@@ -26,7 +26,7 @@ namespace VCX::Labs::RigidBody {
         glm::vec3                  _boxColor { 121.0f / 255, 207.0f / 255, 171.0f / 255 };
 
         CaseDoubleRB();
-        virtual std::string_view const GetName() override { return "Two Rigid Bodies Collide"; }
+        virtual std::string_view const GetName() override { return "Double rigid bodiy collision"; }
         virtual void                     OnSetupPropsUI() override;
         virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
         virtual void                     OnProcessInput(ImVec2 const & pos) override;

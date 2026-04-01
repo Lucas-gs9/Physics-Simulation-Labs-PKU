@@ -5,21 +5,17 @@ namespace VCX::Labs::RigidBody {
         _program(
             Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"),
                                         Engine::GL::SharedShader("assets/shaders/flat.frag") })),
-        _boxItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Triangles),
+        _objItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Triangles),
         _lineItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Lines) {
-        const std::vector<std::uint32_t> line_index = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 }; // line index
-        _lineItem.UpdateElementBuffer(line_index);
-        const std::vector<std::uint32_t> tri_index = { 0, 1, 2, 0, 2, 3, 1, 0, 4, 1, 4, 5, 1, 5, 6, 1, 6, 2, 2, 7, 3, 2, 6, 7, 0, 3, 7, 0, 7, 4, 4, 6, 5, 4, 7, 6 };
-        _boxItem.UpdateElementBuffer(tri_index);
+        reset();
+
         _cameraManager.AutoRotate = false;
         _cameraManager.Save(_camera);
-        auto box = std::make_shared<BoxShape>(glm::vec3(0.5f, 1.f, 1.5f));
-        _body    = std::make_unique<RigidBody>(RigidBody(1.f, box));
     }
 
     void CaseSingleRB::OnSetupPropsUI() {
         if (ImGui::CollapsingHeader("Algorithm", ImGuiTreeNodeFlags_DefaultOpen)) {
-            if (ImGui::Button("Reset System")) _body->Reset(_initv);
+            if (ImGui::Button("Reset System")) reset();
             ImGui::SameLine();
             if (ImGui::Button(_stopped ? "Start Simulation" : "Stop Simulation")) _stopped = ! _stopped;
             ImGui::SliderFloat("init V.x", &_initv[0], 0, 2);
@@ -28,6 +24,10 @@ namespace VCX::Labs::RigidBody {
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::ColorEdit3("Box Color", glm::value_ptr(_boxColor));
+            const char * objNames[] = { "Cuboid", "Sphere" };
+            if (ImGui::Combo("Set Object", &_objId, objNames, IM_ARRAYSIZE(objNames))) {
+                reset();
+            }
         }
     }
 
@@ -69,27 +69,7 @@ namespace VCX::Labs::RigidBody {
         glEnable(GL_LINE_SMOOTH);
         glLineWidth(.5f);
 
-        glm::vec3 x = _body->x;
-        glm::mat3 R = glm::mat3_cast(_body->q);
-        glm::vec3 halfDim = std::static_pointer_cast<BoxShape>(_body->shape)->dim * 0.5f;
-        std::vector<glm::vec3> VertsPosition(8);
-        VertsPosition[0] = x + R * glm::vec3(-halfDim.x, halfDim.y, halfDim.z);
-        VertsPosition[1] = x + R * glm::vec3(halfDim.x, halfDim.y, halfDim.z);
-        VertsPosition[2] = x + R * glm::vec3(halfDim.x, halfDim.y, -halfDim.z);
-        VertsPosition[3] = x + R * glm::vec3(-halfDim.x, halfDim.y, -halfDim.z);
-        VertsPosition[4] = x + R * glm::vec3(-halfDim.x, -halfDim.y, halfDim.z);
-        VertsPosition[5] = x + R * glm::vec3(halfDim.x, -halfDim.y, halfDim.z);
-        VertsPosition[6] = x + R * glm::vec3(halfDim.x, -halfDim.y, -halfDim.z);
-        VertsPosition[7] = x + R * glm::vec3(-halfDim.x, -halfDim.y, -halfDim.z);
-
-        auto span_bytes = Engine::make_span_bytes<glm::vec3>(VertsPosition);
-        _program.GetUniforms().SetByName("u_Color", _boxColor);
-        _boxItem.UpdateVertexBuffer("position", span_bytes);
-        _boxItem.Draw({ _program.Use() });
-
-        _program.GetUniforms().SetByName("u_Color", glm::vec3(1.f, 1.f, 1.f));
-        _lineItem.UpdateVertexBuffer("position", span_bytes);
-        _lineItem.Draw({ _program.Use() });
+        DrawBody(_body, _objItem, _lineItem, _program, _boxColor);
 
         glLineWidth(1.f);
         glPointSize(1.f);
@@ -105,7 +85,7 @@ namespace VCX::Labs::RigidBody {
 
     void CaseSingleRB::OnProcessInput(ImVec2 const & pos) {
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            auto intersection = GetRayBoxIntersection(pos, _camera, _windowSize, *_body);
+            auto intersection = GetRayBodyIntersection(pos, _camera, _windowSize, *_body);
             if (intersection.has_value()) {
                 _isDragging     = true;
                 glm::mat3 R_inv = glm::transpose(glm::mat3_cast(_body->q));
@@ -115,5 +95,14 @@ namespace VCX::Labs::RigidBody {
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
             _isDragging = false;
         }
+    }
+
+    void CaseSingleRB::reset() {
+        if (_objId == 0) _shape = std::make_shared<BoxShape>(glm::vec3(0.5f, 1.f, 1.5f));
+        else _shape = std::make_shared<SphereShape>(1.2f);
+        _body = std::make_unique<RigidBody>(RigidBody(1.f, _shape));
+        SyncMeshWithShape(_shape, _lineItem, _objItem);
+        DrawBody(_body, _objItem, _lineItem, _program, _boxColor);
+        _body->Reset(_initv);
     }
 }

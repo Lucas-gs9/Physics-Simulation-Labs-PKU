@@ -18,22 +18,25 @@ namespace VCX::Labs::RigidBody {
         Engine::GL::UniqueRenderFrame _frame;
         Engine::Camera                _camera { .Eye = glm::vec3(-3, 3, 3) };
         Common::OrbitCameraManager    _cameraManager;
-        Engine::GL::UniqueIndexedRenderItem _boxItem;
+        Engine::GL::UniqueIndexedRenderItem _objItem;
         Engine::GL::UniqueIndexedRenderItem _lineItem;
         std::pair<std::uint32_t, std::uint32_t> _windowSize;
 
-        std::unique_ptr<RigidBody> _body;
+        std::shared_ptr<Shape>     _shape;
+        std::shared_ptr<RigidBody> _body;
         glm::vec3                  _boxColor { 121.0f / 255, 207.0f / 255, 171.0f / 255 };
         glm::vec3                  _initv { 0.f, 0.f, 0.f };
 
         glm::vec3 _f_point { 0.f };
         bool      _isDragging = false;
         bool      _stopped    = false;
+        int       _objId      = 0;
 
         CaseSingleRB();
-        virtual std::string_view const   GetName() override { return "Draw a Rigid Body"; }
+        virtual std::string_view const   GetName() override { return "Single rigid body simulation"; }
 		virtual void OnSetupPropsUI() override;
         virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
         virtual void                     OnProcessInput(ImVec2 const & pos) override;
+        void                             reset();
 	};
 }

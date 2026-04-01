@@ -6,6 +6,7 @@
 #include "Labs/Common/ImageRGB.h"
 #include "Labs/1-RigidBody/RigidBody.h"
 #include <limits>
+#include <fcl/narrowphase/collision.h>
 
 namespace VCX::Labs::RigidBody {
 
@@ -20,7 +21,15 @@ namespace VCX::Labs::RigidBody {
 
     glm::mat3 get_K(const RigidBody & body, glm::vec3 r);
 
-    std::optional<glm::vec3> GetRayBoxIntersection(ImVec2 const & mousePos, Engine::Camera const & camera, std::pair<uint32_t, uint32_t> windowSize, const RigidBody & body);
+    std::optional<glm::vec3> GetRayBodyIntersection(ImVec2 const & mousePos, Engine::Camera const & camera, std::pair<uint32_t, uint32_t> windowSize, const RigidBody & body);
 
     RaycastResult GetNearestBody(ImVec2 const & mousePos, Engine::Camera const & camera, std::pair<uint32_t, uint32_t> windowSize, const std::vector<std::shared_ptr<RigidBody>> & bodies);
+
+    std::shared_ptr<fcl::CollisionGeometryf> CreateFCLGeometry(std::shared_ptr<Shape> shape);
+
+    fcl::Transform3f GetFCLTransform(const RigidBody & body);
+
+    void SyncMeshWithShape(std::shared_ptr<Shape> const & shape, Engine::GL::UniqueIndexedRenderItem & lineItem, Engine::GL::UniqueIndexedRenderItem & objItem);
+
+    void DrawBody(std::shared_ptr<RigidBody> const & body, Engine::GL::UniqueIndexedRenderItem & objItem, Engine::GL::UniqueIndexedRenderItem & lineItem, Engine::GL::UniqueProgram & program, const glm::vec3 & color);
 }

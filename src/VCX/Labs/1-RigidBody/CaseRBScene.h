@@ -32,7 +32,7 @@ namespace VCX::Labs::RigidBody {
 
 
         CaseRBScene();
-        virtual std::string_view const GetName() override { return "Complex Rigid Body System"; }
+        virtual std::string_view const GetName() override { return "Complex rigid body system"; }
         virtual void                     OnSetupPropsUI() override;
         virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
         virtual void                     OnProcessInput(ImVec2 const & pos) override;

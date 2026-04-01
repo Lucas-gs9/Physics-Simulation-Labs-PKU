@@ -2,7 +2,6 @@
 
 #include "Labs/1-RigidBody/RigidBody.h"
 #include "Labs/1-RigidBody/utils.h"
-#include <fcl/narrowphase/collision.h>
 #include <vector>
 #include <utility>
 #include <algorithm>
