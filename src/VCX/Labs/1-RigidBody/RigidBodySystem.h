@@ -26,7 +26,10 @@ namespace VCX::Labs::RigidBody {
         std::vector<std::shared_ptr<RigidBody>> bodies;
         std::vector<ContactInfo>                contacts;
         float                                   muN = 0.7f;
-        float                                   muT = 0.1f;
+        float                                   muT = 0.6f;
+
+        bool  enableGravity = false;
+        float g             = 9.8f;
 
         void Clear();
         void AddBody(std::shared_ptr<RigidBody> body);
@@ -34,6 +37,6 @@ namespace VCX::Labs::RigidBody {
 
     private:
         void CollisionDetect(int id1, int id2);
-        glm::vec3 GetCollisionImpulse(const ContactInfo & contact);
+        glm::vec3 GetCollisionImpulse(const ContactInfo & contact, float dt);
     };
 }

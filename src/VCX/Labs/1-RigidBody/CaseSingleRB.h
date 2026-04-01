@@ -6,6 +6,7 @@
 #include "Labs/Common/ImageRGB.h"
 #include "Labs/Common/OrbitCameraManager.h"
 #include "Labs/1-RigidBody/RigidBody.h"
+#include "Labs/1-RigidBody/utils.h"
 #include<optional>
 
 
@@ -34,8 +35,5 @@ namespace VCX::Labs::RigidBody {
 		virtual void OnSetupPropsUI() override;
         virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
         virtual void                     OnProcessInput(ImVec2 const & pos) override;
-
 	};
-
-    std::optional<glm::vec3> GetRayBoxIntersection(ImVec2 const & mousePos, Engine::Camera const & camera, std::pair<uint32_t, uint32_t> windowSize, const std::unique_ptr<RigidBody> & body);
 }

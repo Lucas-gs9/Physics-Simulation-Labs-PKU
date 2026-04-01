@@ -5,6 +5,7 @@
 #include "Engine/app.h"
 #include "Labs/1-RigidBody/CaseSingleRB.h"
 #include "Labs/1-RigidBody/CaseDoubleRB.h"
+#include "Labs/1-RigidBody/CaseRBScene.h"
 #include "Labs/Common/UI.h"
 
 namespace VCX::Labs::RigidBody {
@@ -13,10 +14,11 @@ namespace VCX::Labs::RigidBody {
         Common::UI _ui;
         CaseSingleRB _caseSingleRB;
         CaseDoubleRB _caseDoubleRB;
+        CaseRBScene  _caseRBScene;
 
         std::size_t _caseId = 0;
 
-        std::vector<std::reference_wrapper<Common::ICase>> _cases = { _caseSingleRB, _caseDoubleRB };
+        std::vector<std::reference_wrapper<Common::ICase>> _cases = { _caseSingleRB, _caseDoubleRB, _caseRBScene };
 
     public:
         App();

@@ -1,0 +1,42 @@
+#pragma once
+#include "Engine/GL/Frame.hpp"
+#include "Engine/GL/Program.h"
+#include "Engine/GL/RenderItem.h"
+#include "Labs/Common/ICase.h"
+#include "Labs/Common/ImageRGB.h"
+#include "Labs/Common/OrbitCameraManager.h"
+#include "Labs/1-RigidBody/RigidBodySystem.h"
+
+namespace VCX::Labs::RigidBody {
+    class CaseRBScene : public Common::ICase {
+    public:
+        Engine::GL::UniqueProgram               _program;
+        Engine::GL::UniqueRenderFrame           _frame;
+        Engine::Camera                          _camera { .Eye = glm::vec3(-3, 3, 3) };
+        Common::OrbitCameraManager              _cameraManager;
+        Engine::GL::UniqueIndexedRenderItem     _boxItem;
+        Engine::GL::UniqueIndexedRenderItem     _lineItem;
+        std::pair<std::uint32_t, std::uint32_t> _windowSize;
+
+        RigidBodySystem                         _system;
+
+        bool      _stopped = false;
+        bool      _controlCamera = true;
+        bool      _isDragging    = false;
+        glm::vec3 _f_point { 0.f };
+        int       _selectedBodyId = -1;
+        float     _k              = 10.f;
+
+        glm::vec3 _boxColor { 121.0f / 255, 207.0f / 255, 171.0f / 255 };
+        glm::vec3 _floorColor { 65.0f / 255, 63.0f / 255, 65.0f / 255 };
+
+
+        CaseRBScene();
+        virtual std::string_view const GetName() override { return "Complex Rigid Body System"; }
+        virtual void                     OnSetupPropsUI() override;
+        virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
+        virtual void                     OnProcessInput(ImVec2 const & pos) override;
+
+        void Reset();
+    };
+}

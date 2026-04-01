@@ -43,15 +43,18 @@ namespace VCX::Labs::RigidBody {
         glm::mat3              I_ref_inv;
         bool                   isStatic = false;
 
-        glm::vec3              x { 0.f }; // position
-        glm::quat              q { 1.f, 0.f, 0.f, 0.f }; // orientation
+        glm::vec3 x { 0.f };                // position
+        glm::quat q { 1.f, 0.f, 0.f, 0.f }; // orientation
 
-        glm::vec3              v { 0.f }; // velocity
-        glm::vec3              w { 0.f }; // angular velocity
-        glm::vec3              L { 0.f };                // angular momentum
+        glm::vec3 v { 0.f }; // velocity
+        glm::vec3 w { 0.f }; // angular velocity
+        glm::vec3 L { 0.f }; // angular momentum
 
-        glm::vec3              f { 0.f }; // force
-        glm::vec3              torque { 0.f };
+        glm::vec3 f { 0.f }; // force
+        glm::vec3 torque { 0.f };
+
+        float damp_v       = 0.999f;
+        float damp_w       = 0.999f;
 
         RigidBody(float mass, std::shared_ptr<Shape> s);
         void Update(float dt);

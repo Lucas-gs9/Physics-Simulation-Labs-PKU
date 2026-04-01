@@ -105,7 +105,7 @@ namespace VCX::Labs::RigidBody {
 
     void CaseSingleRB::OnProcessInput(ImVec2 const & pos) {
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            auto intersection = GetRayBoxIntersection(pos, _camera, _windowSize, _body);
+            auto intersection = GetRayBoxIntersection(pos, _camera, _windowSize, *_body);
             if (intersection.has_value()) {
                 _isDragging     = true;
                 glm::mat3 R_inv = glm::transpose(glm::mat3_cast(_body->q));
@@ -116,56 +116,4 @@ namespace VCX::Labs::RigidBody {
             _isDragging = false;
         }
     }
-
-    std::optional<glm::vec3> GetRayBoxIntersection(ImVec2 const & mousePos, Engine::Camera const & camera, std::pair<uint32_t, uint32_t> windowSize, const std::unique_ptr<RigidBody> & body) {
-
-        float x = (2.0f * mousePos.x) / windowSize.first - 1.0f;
-        float y = 1.0f - (2.0f * mousePos.y) / windowSize.second;
-
-        glm::mat4 invProjView = glm::inverse(camera.GetProjectionMatrix(float(windowSize.first) / windowSize.second) * camera.GetViewMatrix());
-        glm::vec4 nearPt      = invProjView * glm::vec4(x, y, -1.0f, 1.0f);
-        glm::vec4 farPt       = invProjView * glm::vec4(x, y, 1.0f, 1.0f);
-        nearPt /= nearPt.w;
-        farPt /= farPt.w;
-
-        glm::vec3 rayOrigin = glm::vec3(nearPt);
-        glm::vec3 rayDir    = glm::normalize(glm::vec3(farPt) - rayOrigin);
-
-
-        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), body->x) * glm::mat4_cast(body->q);
-        glm::mat4 invModel    = glm::inverse(modelMatrix);
-
-        glm::vec3 locOrigin = glm::vec3(invModel * glm::vec4(rayOrigin, 1.0f));
-        glm::vec3 locDir    = glm::normalize(glm::vec3(invModel * glm::vec4(rayDir, 0.0f)));
-
-        glm::vec3 boxMin = -std::static_pointer_cast<BoxShape>(body->shape)->dim * 0.5f;
-        glm::vec3 boxMax = std::static_pointer_cast<BoxShape>(body->shape)->dim * 0.5f;
-
-        float tMin = (boxMin.x - locOrigin.x) / locDir.x;
-        float tMax = (boxMax.x - locOrigin.x) / locDir.x;
-        if (tMin > tMax) std::swap(tMin, tMax);
-
-        float tyMin = (boxMin.y - locOrigin.y) / locDir.y;
-        float tyMax = (boxMax.y - locOrigin.y) / locDir.y;
-        if (tyMin > tyMax) std::swap(tyMin, tyMax);
-
-        if ((tMin > tyMax) || (tyMin > tMax)) return std::nullopt;
-        if (tyMin > tMin) tMin = tyMin;
-        if (tyMax < tMax) tMax = tyMax;
-
-        float tzMin = (boxMin.z - locOrigin.z) / locDir.z;
-        float tzMax = (boxMax.z - locOrigin.z) / tzMin; 
-        tzMin       = (boxMin.z - locOrigin.z) / locDir.z;
-        tzMax       = (boxMax.z - locOrigin.z) / locDir.z;
-        if (tzMin > tzMax) std::swap(tzMin, tzMax);
-
-        if ((tMin > tzMax) || (tzMin > tMax)) return std::nullopt;
-        if (tzMin > tMin) tMin = tzMin;
-        if (tzMax < tMax) tMax = tzMax;
-
-        if (tMin < 0) return std::nullopt;
-
-        return rayOrigin + rayDir * tMin;
-    }
-
 }

@@ -8,6 +8,12 @@ namespace VCX::Labs::RigidBody {
     }
 
     void RigidBody::Update(float dt) {
+        if (isStatic) {
+            f      = glm::vec3(0.f);
+            torque = glm::vec3(0.f);
+            return;
+        }
+
         v += f * dt / m;
         x += v * dt;
 
@@ -16,11 +22,22 @@ namespace VCX::Labs::RigidBody {
         w = R * I_ref_inv * glm::transpose(R) * L;
         q += 0.5f * dt * glm::quat(0, w.x, w.y, w.z) * q;
         q      = glm::normalize(q);
+
+        v *= damp_v;
+        w *= damp_w;
+        L = R * I_ref * glm::transpose(R) * w;
+
+        if (glm::length(v) < 0.08f) v = glm::vec3(0.f);
+        if (glm::length(w) < 0.08f) {
+            w = glm::vec3(0.f);
+            L = glm::vec3(0.f);
+        }
         f      = glm::vec3(0.f);
         torque = glm::vec3(0.f);
     }
 
     void RigidBody::AddForce(glm::vec3 const& force, glm::vec3 const& f_point) {
+        if (isStatic) return;
         f += force;
         glm::vec3 r = f_point - x;
         torque += glm::cross(r, force);
@@ -37,6 +54,7 @@ namespace VCX::Labs::RigidBody {
     }
 
     void RigidBody::ApplyImpulse(glm::vec3 const& impulse, glm::vec3 const& i_point) {
+        if (isStatic) return;
         v += impulse / m;
         glm::vec3 r     = i_point - x;
         glm::mat3 R = glm::mat3_cast(q);
