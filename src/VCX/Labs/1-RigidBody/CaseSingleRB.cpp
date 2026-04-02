@@ -16,7 +16,7 @@ namespace VCX::Labs::RigidBody {
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::ColorEdit3("Box Color", glm::value_ptr(_renderer.objColor));
-            const char * objNames[] = { "Cuboid", "Sphere" };
+            const char * objNames[] = { "Cuboid", "Sphere", "Cylinder" };
             if (ImGui::Combo("Set Object", &_objId, objNames, IM_ARRAYSIZE(objNames))) {
                 reset();
             }
@@ -76,7 +76,10 @@ namespace VCX::Labs::RigidBody {
     void CaseSingleRB::reset() {
         std::shared_ptr<Shape> shape;
         if (_objId == 0) shape = std::make_shared<BoxShape>(glm::vec3(0.5f, 1.f, 1.5f));
-        else shape = std::make_shared<SphereShape>(1.2f);
+        else if (_objId == 1) shape = std::make_shared<SphereShape>(1.2f);
+        else if (_objId == 2) {
+            shape = std::make_shared<CylinderShape>(0.5f, 1.5f);
+        }
         _body = std::make_shared<RigidBody>(RigidBody(1.f, shape));
         _body->Reset(_initv);
     }

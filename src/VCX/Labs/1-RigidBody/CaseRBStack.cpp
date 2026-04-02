@@ -118,30 +118,31 @@ namespace VCX::Labs::RigidBody {
             _system.AddBody(ball);
         } else if (_caseId == 1) {
             auto base1 = std::make_shared<RigidBody>(8.0f, std::make_shared<BoxShape>(glm::vec3(0.5f, 0.5f, 0.5f)));
-            base1->x   = { 0.f, -0.2f, 0 };
+            base1->x = { 0.f, -0.2f, 0 };
             _system.AddBody(base1);
 
             auto base2 = std::make_shared<RigidBody>(8.0f, std::make_shared<BoxShape>(glm::vec3(0.3f, 1.5f, 0.3f)));
-            base2->x   = { 0, 1.f, 0 };
+            base2->x = { 0, 1.f, 0 };
             _system.AddBody(base2);
 
             auto beam = std::make_shared<RigidBody>(4.0f, std::make_shared<BoxShape>(glm::vec3(6.0f, 0.5f, 1.0f)));
-            beam->x   = { 0, 2.25f, 0 };
+            beam->x = { 0, 2.25f, 0 };
             _system.AddBody(beam);
 
             auto boxL = std::make_shared<RigidBody>(1.0f, std::make_shared<BoxShape>(glm::vec3(0.8f)));
-            boxL->x   = { -2.5f, 3.f, 0 };
+            boxL->x = { -2.5f, 3.f, 0 };
             _system.AddBody(boxL);
 
             auto boxR = std::make_shared<RigidBody>(1.0f, std::make_shared<BoxShape>(glm::vec3(0.8f)));
-            boxR->x   = { 2.5f, 3.f, 0 };
+            boxR->x = { 2.5f, 3.f, 0 };
             _system.AddBody(boxR);
 
             auto ballL = std::make_shared<RigidBody>(1.0f, std::make_shared<SphereShape>(0.3f));
-            ballL->x   = { -2.5f, 3.8f, 0.02f };
+            ballL->x = { -2.5f, 3.8f, 0.02f };
             _system.AddBody(ballL);
+
             auto ballR = std::make_shared<RigidBody>(1.0f, std::make_shared<SphereShape>(0.3f));
-            ballR->x   = { 2.5f, 3.8f, 0 };
+            ballR->x = { 2.5f, 3.8f, 0 };
             _system.AddBody(ballR);
         } else if (_caseId == 2) {
             auto box1 = std::make_shared<RigidBody>(8.0f, std::make_shared<BoxShape>(glm::vec3(1.f, 1.f, 1.f)));
@@ -157,7 +158,7 @@ namespace VCX::Labs::RigidBody {
             _system.AddBody(box2);
 
             auto box3 = std::make_shared<RigidBody>(2.0f, std::make_shared<BoxShape>(glm::vec3(0.4f, 4.f, 0.4f)));
-            box3->x   = { 0, 4.5f, 0 };
+            box3->x = { 0, 4.5f, 0 };
             _system.AddBody(box3);
 
             auto ball2 = std::make_shared<RigidBody>(13.0f, std::make_shared<SphereShape>(2.5f));

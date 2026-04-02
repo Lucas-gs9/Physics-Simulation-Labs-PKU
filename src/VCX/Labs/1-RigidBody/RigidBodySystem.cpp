@@ -36,8 +36,8 @@ namespace VCX::Labs::RigidBody {
                 auto const & contact = contacts[k];
                 glm::vec3    J       = impulse_list[k];
                 for (auto const & pos : contact.pos_list) {
-                    bodies[contact.id1]->ApplyImpulse(-J, contact.c_pos);
-                    bodies[contact.id2]->ApplyImpulse(J, contact.c_pos);
+                    bodies[contact.id1]->ApplyImpulse(-J, pos);
+                    bodies[contact.id2]->ApplyImpulse(J, pos);
                 }
             }
         }
@@ -60,7 +60,7 @@ namespace VCX::Labs::RigidBody {
         fcl::CollisionObject<float>  obj_A(geometry_A, GetFCLTransform(b0));
         fcl::CollisionObject<float>  obj_B(geometry_B, GetFCLTransform(b1));
 
-        fcl::CollisionRequest<float> collisionRequest(8, true);
+        fcl::CollisionRequest<float> collisionRequest(16, true);
         fcl::CollisionResult<float>  collisionResult;
         fcl::collide(&obj_A, &obj_B, collisionRequest, collisionResult);
         if (! collisionResult.isCollision()) return;

@@ -61,6 +61,21 @@ namespace VCX::Labs::RigidBody {
 
             _system.AddBody(b1);
             _system.AddBody(b2);
+        } else if (_caseId == 4) {
+            float radius = 0.6f;
+            float height = 2.0f;
+
+            auto b1 = std::make_shared<RigidBody>(1.0f, std::make_shared<CylinderShape>(radius, height));
+            b1->x   = glm::vec3(-4.0f, 0.3f, -0.3f);
+            b1->v   = glm::vec3(_v_left, 0.0f, 0.0f);
+
+            auto b2 = std::make_shared<RigidBody>(1.0f, std::make_shared<CylinderShape>(radius, height));
+            b2->x   = glm::vec3(4.0f, 0.0f, 0.0f);
+            b2->v   = glm::vec3(-_v_right, 0.0f, 0.0f);
+            b2->q = glm::angleAxis(glm::radians(90.f), glm::vec3(0, 1, 0));
+
+            _system.AddBody(b1);
+            _system.AddBody(b2);
         }
     }
     CaseDoubleRB::CaseDoubleRB(){
@@ -73,7 +88,7 @@ namespace VCX::Labs::RigidBody {
             if (ImGui::Button(_stopped ? "Start Simulation" : "Stop Simulation")) _stopped = ! _stopped;
             ImGui::SliderFloat("init V_left", &_v_left, 0, 10);
             ImGui::SliderFloat("init V_right", &_v_right, 0, 10);
-            const char * scNames[] = { "Scene 1", "Scene 2", "Scene 3", "Scene 4" };
+            const char * scNames[] = { "Scene 1", "Scene 2", "Scene 3", "Scene 4", "Scene 5" };
             if (ImGui::Combo("Set Scene", &_caseId, scNames, IM_ARRAYSIZE(scNames))) {
                 LoadCase();
             }

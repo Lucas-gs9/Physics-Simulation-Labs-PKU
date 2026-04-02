@@ -10,7 +10,8 @@ namespace VCX::Labs::RigidBody {
     class Shape {
     public:
         enum class Type { Box,
-                          Sphere };
+                          Sphere,
+                          Cylinder };
 
         virtual ~Shape()             = default;
         virtual Type GetType() const = 0;
@@ -48,6 +49,23 @@ namespace VCX::Labs::RigidBody {
             float i = (2.0f / 5.0f) * mass * radius * radius;
             return glm::mat3(
                 i, 0, 0, 0, i, 0, 0, 0, i);
+        }
+    };
+
+    class CylinderShape : public Shape {
+    public:
+        float radius;
+        float height;
+
+        CylinderShape(float r, float h):
+            radius(r), height(h) {}
+
+        Type GetType() const override { return Type::Cylinder; }
+
+        glm::mat3 GetInertia(float mass) const override {
+            float i_z  = (1.0f / 2.0f) * mass * radius * radius;
+            float i_xy = (1.0f / 12.0f) * mass * (3.0f * radius * radius + height * height);
+            return glm::mat3(i_xy, 0, 0, 0, i_xy, 0, 0, 0, i_z);
         }
     };
 

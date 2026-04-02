@@ -82,6 +82,56 @@ namespace VCX::Labs::RigidBody {
             if (tMin < 0) return std::nullopt;
 
             return rayOrigin + rayDir * tMin;
+        } else if (body.shape->GetType() == Shape::Type::Cylinder) {
+            auto cyl = std::static_pointer_cast<CylinderShape>(body.shape);
+
+            glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), body.x) * glm::mat4_cast(body.q);
+            glm::mat4 invModel    = glm::inverse(modelMatrix);
+
+            glm::vec3 ro = glm::vec3(invModel * glm::vec4(rayOrigin, 1.0f));
+            glm::vec3 rd = glm::normalize(glm::vec3(invModel * glm::vec4(rayDir, 0.0f)));
+
+            float halfH = cyl->height * 0.5f;
+            float r2    = cyl->radius * cyl->radius;
+            float tMin  = -1.0f;
+
+            float a = rd.x * rd.x + rd.y * rd.y;         
+            float b = 2.0f * (ro.x * rd.x + ro.y * rd.y); 
+            float c = ro.x * ro.x + ro.y * ro.y - r2;     
+
+            float disc = b * b - 4.0f * a * c;
+
+            if (disc >= 0) {
+                float sqrtDisc = std::sqrt(disc);
+                float t0       = (-b - sqrtDisc) / (2.0f * a);
+                float t1       = (-b + sqrtDisc) / (2.0f * a);
+
+                for (float t : { t0, t1 }) {
+                    if (t > 0) {
+                        float z = ro.z + t * rd.z;
+                        if (z >= -halfH && z <= halfH) {
+                            tMin = t;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            for (float h : { -halfH, halfH }) {
+                if (std::abs(rd.z) > 0.0001f) {     
+                    float tCap = (h - ro.z) / rd.z;
+                    if (tCap > 0 && (tMin < 0 || tCap < tMin)) {
+                        glm::vec3 hitPos = ro + tCap * rd;
+                        if (hitPos.x * hitPos.x + hitPos.y * hitPos.y <= r2) {
+                            tMin = tCap;
+                        }
+                    }
+                }
+            }
+
+            if (tMin > 0) {
+                return rayOrigin + rayDir * tMin;
+            }
         }
         return std::nullopt;
     }
@@ -119,6 +169,9 @@ namespace VCX::Labs::RigidBody {
         } else if (shape->GetType() == Shape::Type::Sphere) {
             auto s = std::static_pointer_cast<SphereShape>(shape);
             return std::make_shared<fcl::Spheref>(s->radius);
+        } else if (shape->GetType() == Shape::Type::Cylinder) {
+            auto s = std::static_pointer_cast<CylinderShape>(shape);
+            return std::make_shared<fcl::Cylinderf>(s->radius, s->height);
         }
         return nullptr;
     }
@@ -160,6 +213,45 @@ namespace VCX::Labs::RigidBody {
                     }
                 }
             }
+        } else if (shapeType == Shape::Type::Cylinder) {
+            int segments = 32; 
+
+            int bottomOffset = 0;
+            int bottomCenter = segments;
+            int topOffset    = segments + 1;
+            int topCenter    = 2 * segments + 1;
+
+            for (int i = 0; i < segments; ++i) {
+                int next = (i + 1) % segments;
+
+                int b1 = bottomOffset + i;
+                int b2 = bottomOffset + next;
+                int t1 = topOffset + i;
+                int t2 = topOffset + next;
+
+                tri_index.push_back(b1);
+                tri_index.push_back(t1);
+                tri_index.push_back(b2);
+
+                tri_index.push_back(b2);
+                tri_index.push_back(t1);
+                tri_index.push_back(t2);
+
+                line_index.push_back(b1);
+                line_index.push_back(t1); 
+                line_index.push_back(b1);
+                line_index.push_back(b2); 
+                line_index.push_back(t1);
+                line_index.push_back(t2); 
+
+                tri_index.push_back(bottomCenter);
+                tri_index.push_back(b2);
+                tri_index.push_back(b1);
+
+                tri_index.push_back(topCenter);
+                tri_index.push_back(t1);
+                tri_index.push_back(t2);
+            }
         }
 
         lineItem.UpdateElementBuffer(line_index);
@@ -200,6 +292,27 @@ namespace VCX::Labs::RigidBody {
                     vertices.push_back(x + R * localPos);
                 }
             }
+        } else if (body.shape->GetType() == Shape::Type::Cylinder) {
+            auto  cyl      = std::static_pointer_cast<CylinderShape>(body.shape);
+            float r        = cyl->radius;
+            float halfH    = cyl->height * 0.5f;
+            int   segments = 32;
+
+            for (int i = 0; i < segments; ++i) {
+                float     theta = i * 2.0f * glm::pi<float>() / segments;
+                glm::vec3 localPos(r * cosf(theta), r * sinf(theta), -halfH);
+                vertices.push_back(x + R * localPos);
+            }
+
+            vertices.push_back(x + R * glm::vec3(0.0f, 0.0f, -halfH));
+
+            for (int i = 0; i < segments; ++i) {
+                float     theta = i * 2.0f * glm::pi<float>() / segments;
+                glm::vec3 localPos(r * cosf(theta), r * sinf(theta), halfH);
+                vertices.push_back(x + R * localPos);
+            }
+
+            vertices.push_back(x + R * glm::vec3(0.0f, 0.0f, halfH));
         }
         auto span_bytes = Engine::make_span_bytes<glm::vec3>(vertices);
         program.GetUniforms().SetByName("u_Color", color);
@@ -215,7 +328,7 @@ namespace VCX::Labs::RigidBody {
         program(
             Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"),
                                         Engine::GL::SharedShader("assets/shaders/flat.frag") })){
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i < 3; ++i) {
             lineItemList.push_back(Engine::GL::UniqueIndexedRenderItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Lines));
             objItemList.push_back(Engine::GL::UniqueIndexedRenderItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Triangles));
             SyncMeshWithShape(Shape::Type(i), lineItemList.back(), objItemList.back());
