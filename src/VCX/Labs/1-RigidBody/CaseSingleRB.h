@@ -14,17 +14,10 @@ namespace VCX::Labs::RigidBody {
 
 	class CaseSingleRB : public Common::ICase {
     public:
-        Engine::GL::UniqueProgram     _program;
-        Engine::GL::UniqueRenderFrame _frame;
-        Engine::Camera                _camera { .Eye = glm::vec3(-3, 3, 3) };
-        Common::OrbitCameraManager    _cameraManager;
-        Engine::GL::UniqueIndexedRenderItem _objItem;
-        Engine::GL::UniqueIndexedRenderItem _lineItem;
+        Renderer                                _renderer;
         std::pair<std::uint32_t, std::uint32_t> _windowSize;
 
-        std::shared_ptr<Shape>     _shape;
         std::shared_ptr<RigidBody> _body;
-        glm::vec3                  _boxColor { 121.0f / 255, 207.0f / 255, 171.0f / 255 };
         glm::vec3                  _initv { 0.f, 0.f, 0.f };
 
         glm::vec3 _f_point { 0.f };

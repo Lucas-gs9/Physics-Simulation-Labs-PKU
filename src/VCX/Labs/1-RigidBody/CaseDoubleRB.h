@@ -6,24 +6,19 @@
 #include "Labs/Common/ImageRGB.h"
 #include "Labs/Common/OrbitCameraManager.h"
 #include "Labs/1-RigidBody/RigidBodySystem.h"
+#include "Labs/1-RigidBody/utils.h"
 
 namespace VCX::Labs::RigidBody {
 
 	class CaseDoubleRB : public Common::ICase {
     public:
-        Engine::GL::UniqueProgram               _program;
-        Engine::GL::UniqueRenderFrame           _frame;
-        Engine::Camera                          _camera { .Eye = glm::vec3(-3, 3, 3) };
-        Common::OrbitCameraManager              _cameraManager;
-        Engine::GL::UniqueIndexedRenderItem     _boxItem;
-        Engine::GL::UniqueIndexedRenderItem     _lineItem;
+        Renderer                                _renderer;
         std::pair<std::uint32_t, std::uint32_t> _windowSize;
 
         RigidBodySystem _system;
         int             _caseId = 0;
 
         bool _stopped = false;
-        glm::vec3                  _boxColor { 121.0f / 255, 207.0f / 255, 171.0f / 255 };
 
         CaseDoubleRB();
         virtual std::string_view const GetName() override { return "Double rigid bodiy collision"; }

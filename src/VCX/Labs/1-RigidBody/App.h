@@ -6,6 +6,7 @@
 #include "Labs/1-RigidBody/CaseSingleRB.h"
 #include "Labs/1-RigidBody/CaseDoubleRB.h"
 #include "Labs/1-RigidBody/CaseRBScene.h"
+#include "Labs/1-RigidBody/CaseRowOfRB.h"
 #include "Labs/Common/UI.h"
 
 namespace VCX::Labs::RigidBody {
@@ -15,6 +16,7 @@ namespace VCX::Labs::RigidBody {
         CaseSingleRB _caseSingleRB;
         CaseDoubleRB _caseDoubleRB;
         CaseRBScene  _caseRBScene;
+        //CaseRowOfRB  _caseRowOfRB;
 
         std::size_t _caseId = 0;
 

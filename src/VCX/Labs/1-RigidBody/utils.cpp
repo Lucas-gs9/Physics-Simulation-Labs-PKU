@@ -129,16 +129,14 @@ namespace VCX::Labs::RigidBody {
         return fcl::Transform3f(Eigen::Translation3f(p.x, p.y, p.z) * Eigen::Quaternionf(q.w, q.x, q.y, q.z));
     }
 
-    void SyncMeshWithShape(std::shared_ptr<Shape> const& shape, Engine::GL::UniqueIndexedRenderItem& lineItem, Engine::GL::UniqueIndexedRenderItem& objItem) {
+    void SyncMeshWithShape(Shape::Type shapeType, Engine::GL::UniqueIndexedRenderItem& lineItem, Engine::GL::UniqueIndexedRenderItem& objItem) {
         std::vector<std::uint32_t> line_index;
         std::vector<std::uint32_t> tri_index;
 
-        if (shape->GetType() == Shape::Type::Box) {
-            auto      box = std::static_pointer_cast<BoxShape>(shape);
-            glm::vec3 d   = box->dim * 0.5f;
+        if (shapeType == Shape::Type::Box) {
             line_index = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
             tri_index = { 0, 1, 2, 0, 2, 3, 1, 0, 4, 1, 4, 5, 1, 5, 6, 1, 6, 2, 2, 7, 3, 2, 6, 7, 0, 3, 7, 0, 7, 4, 4, 6, 5, 4, 7, 6 };
-        } else if (shape->GetType() == Shape::Type::Sphere) {
+        } else if (shapeType == Shape::Type::Sphere) {
             int sectors = 32, stacks = 16;
             for (int i = 0; i < stacks; ++i) {
                 int k1 = i * (sectors + 1);
@@ -168,14 +166,14 @@ namespace VCX::Labs::RigidBody {
         objItem.UpdateElementBuffer(tri_index);
     }
 
-    void DrawBody(std::shared_ptr<RigidBody> const& body, Engine::GL::UniqueIndexedRenderItem& objItem, Engine::GL::UniqueIndexedRenderItem& lineItem, Engine::GL::UniqueProgram& program, const glm::vec3& color) {
+    void DrawBody(const RigidBody & body, Engine::GL::UniqueIndexedRenderItem& objItem, Engine::GL::UniqueIndexedRenderItem& lineItem, Engine::GL::UniqueProgram& program, const glm::vec3& color) {
         std::vector<glm::vec3> vertices;
 
-        glm::vec3 x = body->x;
-        glm::mat3 R = glm::mat3_cast(body->q);
+        glm::vec3 x = body.x;
+        glm::mat3 R = glm::mat3_cast(body.q);
 
-        if (body->shape->GetType() == Shape::Type::Box) {
-            auto      box = std::static_pointer_cast<BoxShape>(body->shape);
+        if (body.shape->GetType() == Shape::Type::Box) {
+            auto      box = std::static_pointer_cast<BoxShape>(body.shape);
             glm::vec3 h   = box->dim * 0.5f;
             vertices      = {
                 x + R * glm::vec3(-h.x, h.y, h.z),
@@ -188,8 +186,8 @@ namespace VCX::Labs::RigidBody {
                 x + R * glm::vec3(-h.x, -h.y, -h.z)
             };
         } 
-        else if (body->shape->GetType() == Shape::Type::Sphere) {
-            auto  sphere  = std::static_pointer_cast<SphereShape>(body->shape);
+        else if (body.shape->GetType() == Shape::Type::Sphere) {
+            auto  sphere  = std::static_pointer_cast<SphereShape>(body.shape);
             float r       = sphere->radius;
             int   sectors = 32, stacks = 16;
             for (int i = 0; i <= stacks; ++i) {
@@ -211,5 +209,50 @@ namespace VCX::Labs::RigidBody {
         program.GetUniforms().SetByName("u_Color", glm::vec3(1.f, 1.f, 1.f));
         lineItem.UpdateVertexBuffer("position", span_bytes);
         lineItem.Draw({ program.Use() });
+    }
+
+    Renderer::Renderer():
+        program(
+            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"),
+                                        Engine::GL::SharedShader("assets/shaders/flat.frag") })){
+        for (int i = 0; i < 2; ++i) {
+            lineItemList.push_back(Engine::GL::UniqueIndexedRenderItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Lines));
+            objItemList.push_back(Engine::GL::UniqueIndexedRenderItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Triangles));
+            SyncMeshWithShape(Shape::Type(i), lineItemList.back(), objItemList.back());
+        }
+        cameraManager.AutoRotate = false;
+        cameraManager.Save(camera);
+    }
+
+    void Renderer::RenderBody(const RigidBody & body) {
+        int i = int(body.shape->GetType());
+        glm::vec3 color;
+        if (body.isStatic) color = roomColor;
+        else color = objColor;
+        DrawBody(body, objItemList[i], lineItemList[i], program, color);
+    }
+
+    void Renderer::Refresh(const std::vector<std::shared_ptr<RigidBody>> & bodies, std::pair<std::uint32_t, std::uint32_t> windowSize) {
+        frame.Resize(windowSize);
+        cameraManager.Update(camera);
+        program.GetUniforms().SetByName("u_Projection", camera.GetProjectionMatrix((float(windowSize.first) / windowSize.second)));
+        program.GetUniforms().SetByName("u_View", camera.GetViewMatrix());
+
+        gl_using(frame);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_LINE_SMOOTH);
+        glLineWidth(.5f);
+
+        for (auto body : bodies) {
+            RenderBody(*body);
+        }
+
+        glLineWidth(1.f);
+        glPointSize(1.f);
+        glDisable(GL_LINE_SMOOTH);
+    }
+
+    void Renderer::ControlCamera(ImVec2 const& pos) {
+        cameraManager.ProcessInput(camera, pos);
     }
 }

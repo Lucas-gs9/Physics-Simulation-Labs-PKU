@@ -1,16 +1,8 @@
 #include "Labs/1-RigidBody/CaseSingleRB.h"
 
 namespace VCX::Labs::RigidBody {
-    CaseSingleRB::CaseSingleRB():
-        _program(
-            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"),
-                                        Engine::GL::SharedShader("assets/shaders/flat.frag") })),
-        _objItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Triangles),
-        _lineItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Lines) {
+    CaseSingleRB::CaseSingleRB(){
         reset();
-
-        _cameraManager.AutoRotate = false;
-        _cameraManager.Save(_camera);
     }
 
     void CaseSingleRB::OnSetupPropsUI() {
@@ -23,7 +15,7 @@ namespace VCX::Labs::RigidBody {
             ImGui::SliderFloat("init V.z", &_initv[2], 0, 2);
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::ColorEdit3("Box Color", glm::value_ptr(_boxColor));
+            ImGui::ColorEdit3("Box Color", glm::value_ptr(_renderer.objColor));
             const char * objNames[] = { "Cuboid", "Sphere" };
             if (ImGui::Combo("Set Object", &_objId, objNames, IM_ARRAYSIZE(objNames))) {
                 reset();
@@ -32,15 +24,13 @@ namespace VCX::Labs::RigidBody {
     }
 
     Common::CaseRenderResult CaseSingleRB::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
-        
-
         if (!_stopped) {
             if (_isDragging) {
                 ImVec2 delta = ImGui::GetIO().MouseDelta;
 
                 glm::vec3 mouseDelta(delta.x, delta.y, 0.0f);
 
-                glm::mat4 invView  = glm::inverse(_camera.GetViewMatrix());
+                glm::mat4 invView  = glm::inverse(_renderer.camera.GetViewMatrix());
                 glm::vec3 camRight = glm::vec3(invView[0]);
                 glm::vec3 camUp    = glm::vec3(invView[1]);
 
@@ -59,33 +49,19 @@ namespace VCX::Labs::RigidBody {
         
         _windowSize = desiredSize;
         
-        _frame.Resize(desiredSize);
-        _cameraManager.Update(_camera);
-        _program.GetUniforms().SetByName("u_Projection", _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second)));
-        _program.GetUniforms().SetByName("u_View", _camera.GetViewMatrix());
-
-        gl_using(_frame);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_LINE_SMOOTH);
-        glLineWidth(.5f);
-
-        DrawBody(_body, _objItem, _lineItem, _program, _boxColor);
-
-        glLineWidth(1.f);
-        glPointSize(1.f);
-        glDisable(GL_LINE_SMOOTH);
+        _renderer.Refresh(std::vector<std::shared_ptr<RigidBody>> { _body }, _windowSize);
 
         return Common::CaseRenderResult {
             .Fixed     = false,
             .Flipped   = true,
-            .Image     = _frame.GetColorAttachment(),
+            .Image     = _renderer.frame.GetColorAttachment(),
             .ImageSize = desiredSize,
         };
     }
 
     void CaseSingleRB::OnProcessInput(ImVec2 const & pos) {
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            auto intersection = GetRayBodyIntersection(pos, _camera, _windowSize, *_body);
+            auto intersection = GetRayBodyIntersection(pos, _renderer.camera, _windowSize, *_body);
             if (intersection.has_value()) {
                 _isDragging     = true;
                 glm::mat3 R_inv = glm::transpose(glm::mat3_cast(_body->q));
@@ -98,11 +74,10 @@ namespace VCX::Labs::RigidBody {
     }
 
     void CaseSingleRB::reset() {
-        if (_objId == 0) _shape = std::make_shared<BoxShape>(glm::vec3(0.5f, 1.f, 1.5f));
-        else _shape = std::make_shared<SphereShape>(1.2f);
-        _body = std::make_unique<RigidBody>(RigidBody(1.f, _shape));
-        SyncMeshWithShape(_shape, _lineItem, _objItem);
-        DrawBody(_body, _objItem, _lineItem, _program, _boxColor);
+        std::shared_ptr<Shape> shape;
+        if (_objId == 0) shape = std::make_shared<BoxShape>(glm::vec3(0.5f, 1.f, 1.5f));
+        else shape = std::make_shared<SphereShape>(1.2f);
+        _body = std::make_shared<RigidBody>(RigidBody(1.f, shape));
         _body->Reset(_initv);
     }
 }
