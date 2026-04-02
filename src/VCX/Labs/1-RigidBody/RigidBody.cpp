@@ -7,7 +7,7 @@ namespace VCX::Labs::RigidBody {
         I_ref_inv = glm::inverse(I_ref);
     }
 
-    void RigidBody::Update(float dt) {
+    void RigidBody::Update(float dt, float damp_v, float damp_w) {
         if (isStatic) {
             f      = glm::vec3(0.f);
             torque = glm::vec3(0.f);
@@ -21,7 +21,7 @@ namespace VCX::Labs::RigidBody {
         L += torque * dt;
         w = R * I_ref_inv * glm::transpose(R) * L;
         q += 0.5f * dt * glm::quat(0, w.x, w.y, w.z) * q;
-        q      = glm::normalize(q);
+        q = glm::normalize(q);
 
         v *= damp_v;
         w *= damp_w;

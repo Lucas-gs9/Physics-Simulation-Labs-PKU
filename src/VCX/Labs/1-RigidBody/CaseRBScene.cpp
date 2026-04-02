@@ -4,6 +4,7 @@ namespace VCX::Labs::RigidBody {
     void CaseRBScene::Reset() {
         _system.Clear();
         _system.enableGravity = true;
+        _system.enableDamp    = false;
 
         float floorSize     = 50.0f;
         float floorThickness   = 0.5f;
@@ -61,18 +62,7 @@ namespace VCX::Labs::RigidBody {
         _system.AddBody(box4);
     }
 
-    CaseRBScene::CaseRBScene():
-    _program(
-            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"),
-                                        Engine::GL::SharedShader("assets/shaders/flat.frag") })),
-        _boxItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Triangles),
-        _lineItem(Engine::GL::VertexLayout().Add<glm::vec3>("position", Engine::GL::DrawFrequency::Stream, 0), Engine::GL::PrimitiveType::Lines){
-        const std::vector<std::uint32_t> line_index = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
-        _lineItem.UpdateElementBuffer(line_index);
-        const std::vector<std::uint32_t> tri_index = { 0, 1, 2, 0, 2, 3, 1, 0, 4, 1, 4, 5, 1, 5, 6, 1, 6, 2, 2, 7, 3, 2, 6, 7, 0, 3, 7, 0, 7, 4, 4, 6, 5, 4, 7, 6 };
-        _boxItem.UpdateElementBuffer(tri_index);
-        _cameraManager.AutoRotate = false;
-        _cameraManager.Save(_camera);
+    CaseRBScene::CaseRBScene(){
         Reset();
     }
 
@@ -85,8 +75,8 @@ namespace VCX::Labs::RigidBody {
             ImGui::SliderFloat("Mouse Force", &_k, 5, 20);
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::ColorEdit3("Box Color", glm::value_ptr(_boxColor));
-            ImGui::ColorEdit3("Room Color", glm::value_ptr(_floorColor));
+            ImGui::ColorEdit3("Box Color", glm::value_ptr(_renderer.objColor));
+            ImGui::ColorEdit3("Room Color", glm::value_ptr(_renderer.roomColor));
         }
     }
 
@@ -98,7 +88,7 @@ namespace VCX::Labs::RigidBody {
 
                 glm::vec3 mouseDelta(delta.x, delta.y, 0.0f);
 
-                glm::mat4 invView  = glm::inverse(_camera.GetViewMatrix());
+                glm::mat4 invView  = glm::inverse(_renderer.camera.GetViewMatrix());
                 glm::vec3 camRight = glm::vec3(invView[0]);
                 glm::vec3 camUp    = glm::vec3(invView[1]);
 
@@ -119,62 +109,22 @@ namespace VCX::Labs::RigidBody {
         }
         _windowSize = desiredSize;
 
-        _frame.Resize(desiredSize);
-        _cameraManager.Update(_camera);
-        _program.GetUniforms().SetByName("u_Projection", _camera.GetProjectionMatrix((float(desiredSize.first) / desiredSize.second)));
-        _program.GetUniforms().SetByName("u_View", _camera.GetViewMatrix());
-
-        gl_using(_frame);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_LINE_SMOOTH);
-        glLineWidth(.5f);
-
-        for (auto body : _system.bodies) {
-            glm::vec3              x       = body->x;
-            glm::mat3              R       = glm::mat3_cast(body->q);
-            glm::vec3              halfDim = std::static_pointer_cast<BoxShape>(body->shape)->dim * 0.5f;
-            std::vector<glm::vec3> VertsPosition(8);
-            VertsPosition[0] = x + R * glm::vec3(-halfDim.x, halfDim.y, halfDim.z);
-            VertsPosition[1] = x + R * glm::vec3(halfDim.x, halfDim.y, halfDim.z);
-            VertsPosition[2] = x + R * glm::vec3(halfDim.x, halfDim.y, -halfDim.z);
-            VertsPosition[3] = x + R * glm::vec3(-halfDim.x, halfDim.y, -halfDim.z);
-            VertsPosition[4] = x + R * glm::vec3(-halfDim.x, -halfDim.y, halfDim.z);
-            VertsPosition[5] = x + R * glm::vec3(halfDim.x, -halfDim.y, halfDim.z);
-            VertsPosition[6] = x + R * glm::vec3(halfDim.x, -halfDim.y, -halfDim.z);
-            VertsPosition[7] = x + R * glm::vec3(-halfDim.x, -halfDim.y, -halfDim.z);
-
-            auto span_bytes = Engine::make_span_bytes<glm::vec3>(VertsPosition);
-            if (body->isStatic) {
-                _program.GetUniforms().SetByName("u_Color", _floorColor);
-            } else {
-                _program.GetUniforms().SetByName("u_Color", _boxColor);
-            }
-            _boxItem.UpdateVertexBuffer("position", span_bytes);
-            _boxItem.Draw({ _program.Use() });
-
-            _program.GetUniforms().SetByName("u_Color", glm::vec3(1.f, 1.f, 1.f));
-            _lineItem.UpdateVertexBuffer("position", span_bytes);
-            _lineItem.Draw({ _program.Use() });
-        }
-
-        glLineWidth(1.f);
-        glPointSize(1.f);
-        glDisable(GL_LINE_SMOOTH);
+         _renderer.Refresh(_system.bodies, _windowSize);
 
         return Common::CaseRenderResult {
             .Fixed     = false,
             .Flipped   = true,
-            .Image     = _frame.GetColorAttachment(),
+            .Image     = _renderer.frame.GetColorAttachment(),
             .ImageSize = desiredSize,
         };
     }
 
     void CaseRBScene::OnProcessInput(ImVec2 const & pos) {
         if (_controlCamera)
-            _cameraManager.ProcessInput(_camera, pos);
+            _renderer.ControlCamera(pos);
         else {
             if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                auto result = GetNearestBody(pos, _camera, _windowSize, _system.bodies);
+                auto result = GetNearestBody(pos, _renderer.camera, _windowSize, _system.bodies);
                 if (result.hit) {
                     _isDragging     = true;
                     _selectedBodyId         = result.bodyId;

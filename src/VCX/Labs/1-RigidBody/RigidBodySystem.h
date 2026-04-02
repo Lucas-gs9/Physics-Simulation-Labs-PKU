@@ -26,8 +26,10 @@ namespace VCX::Labs::RigidBody {
         std::vector<ContactInfo>                contacts;
         float                                   muN = 0.7f;
         float                                   muT = 0.6f;
+        float                                   beta = 0.15f;
 
         bool  enableGravity = false;
+        bool  enableDamp    = true;
         float g             = 9.8f;
 
         void Clear();

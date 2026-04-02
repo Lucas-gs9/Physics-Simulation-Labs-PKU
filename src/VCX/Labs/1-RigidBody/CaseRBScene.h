@@ -10,12 +10,7 @@
 namespace VCX::Labs::RigidBody {
     class CaseRBScene : public Common::ICase {
     public:
-        Engine::GL::UniqueProgram               _program;
-        Engine::GL::UniqueRenderFrame           _frame;
-        Engine::Camera                          _camera { .Eye = glm::vec3(-3, 3, 3) };
-        Common::OrbitCameraManager              _cameraManager;
-        Engine::GL::UniqueIndexedRenderItem     _boxItem;
-        Engine::GL::UniqueIndexedRenderItem     _lineItem;
+        Renderer                                _renderer;
         std::pair<std::uint32_t, std::uint32_t> _windowSize;
 
         RigidBodySystem                         _system;
@@ -27,8 +22,6 @@ namespace VCX::Labs::RigidBody {
         int       _selectedBodyId = -1;
         float     _k              = 10.f;
 
-        glm::vec3 _boxColor { 121.0f / 255, 207.0f / 255, 171.0f / 255 };
-        glm::vec3 _floorColor { 65.0f / 255, 63.0f / 255, 65.0f / 255 };
 
 
         CaseRBScene();

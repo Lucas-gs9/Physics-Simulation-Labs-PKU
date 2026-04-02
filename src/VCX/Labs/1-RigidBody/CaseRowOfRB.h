@@ -10,22 +10,13 @@
 namespace VCX::Labs::RigidBody {
     class CaseRowOfRB : public Common::ICase {
     public:
-        Engine::GL::UniqueProgram               _program;
-        Engine::GL::UniqueRenderFrame           _frame;
-        Engine::Camera                          _camera { .Eye = glm::vec3(-3, 3, 3) };
-        Common::OrbitCameraManager              _cameraManager;
-        Engine::GL::UniqueIndexedRenderItem     _objItem;
-        Engine::GL::UniqueIndexedRenderItem     _lineItem;
-        Engine::GL::UniqueIndexedRenderItem     _wallItem;
-        Engine::GL::UniqueIndexedRenderItem     _wLineItem;
+        Renderer                                _renderer;
         std::pair<std::uint32_t, std::uint32_t> _windowSize;
 
-        std::shared_ptr<Shape> _shape = std::make_shared<SphereShape>(0.5f);
-        std::shared_ptr<Shape> _wallShape = std::make_shared<BoxShape>(glm::vec3 { 0.1f, 10.f, 5.f });
         RigidBodySystem _system;
 
-        glm::vec3 _objColor { 121.0f / 255, 207.0f / 255, 171.0f / 255 };
         bool      _stopped = false;
+        int  _objId   = 0;
 
         CaseRowOfRB();
         virtual std::string_view const   GetName() override { return "Newton's pendulum simulation"; }

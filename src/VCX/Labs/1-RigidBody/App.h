@@ -16,11 +16,11 @@ namespace VCX::Labs::RigidBody {
         CaseSingleRB _caseSingleRB;
         CaseDoubleRB _caseDoubleRB;
         CaseRBScene  _caseRBScene;
-        //CaseRowOfRB  _caseRowOfRB;
+        CaseRowOfRB  _caseRowOfRB;
 
         std::size_t _caseId = 0;
 
-        std::vector<std::reference_wrapper<Common::ICase>> _cases = { _caseSingleRB, _caseDoubleRB, _caseRBScene };
+        std::vector<std::reference_wrapper<Common::ICase>> _cases = { _caseSingleRB, _caseDoubleRB, _caseRBScene, _caseRowOfRB };
 
     public:
         App();

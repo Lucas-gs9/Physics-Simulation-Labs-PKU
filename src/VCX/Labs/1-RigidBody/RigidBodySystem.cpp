@@ -25,7 +25,7 @@ namespace VCX::Labs::RigidBody {
                 CollisionDetect(i, j);
             }
 
-        const int numIterations = 20;
+        const int numIterations = 25;
 
         for (int i = 0; i < numIterations; ++i) {
             std::vector<glm::vec3> impulse_list;
@@ -36,13 +36,16 @@ namespace VCX::Labs::RigidBody {
                 auto const & contact = contacts[k];
                 glm::vec3    J       = impulse_list[k];
                 for (auto const & pos : contact.pos_list) {
-                    bodies[contact.id1]->ApplyImpulse(-J, pos);
-                    bodies[contact.id2]->ApplyImpulse(J, pos);
+                    bodies[contact.id1]->ApplyImpulse(-J, contact.c_pos);
+                    bodies[contact.id2]->ApplyImpulse(J, contact.c_pos);
                 }
             }
         }
         for (auto & body : bodies) {
-            body->Update(dt);
+            if (enableDamp)
+                body->Update(dt);
+            else
+                body->Update(dt, 1.f, 1.f);
         }
     }
 
@@ -83,14 +86,15 @@ namespace VCX::Labs::RigidBody {
 
         glm::vec3   r1    = contact.c_pos - body1.x;
         glm::vec3   r2    = contact.c_pos - body2.x;
-        glm::vec3   v1    = body1.v + glm::cross(body1.w, r1);
+        if (body1.shape->GetType() == Shape::Type::Sphere) r1 = contact.c_normal * (-std::static_pointer_cast<SphereShape>(body1.shape)->radius);
+        if (body2.shape->GetType() == Shape::Type::Sphere) r2 = contact.c_normal * (-std::static_pointer_cast<SphereShape>(body1.shape)->radius);
+        glm::vec3 v1 = body1.v + glm::cross(body1.w, r1);
         glm::vec3   v2    = body2.v + glm::cross(body2.w, r2);
 
         glm::vec3 v_rel = v2 - v1;
         float     v_dot_n = glm::dot(v_rel, contact.c_normal);
-        if (v_dot_n > 0) return { 0.f, 0.f, 0.f };
+        if (v_dot_n > 0.f && contact.depth < 0.001f) return { 0.f, 0.f, 0.f };
 
-        float beta = 0.1f;
         float slop = 0.005f;
         float v_bias = (beta / dt) * std::max(0.f, contact.depth - slop);
         v_bias       = std::min(v_bias, 0.5f);
@@ -108,9 +112,12 @@ namespace VCX::Labs::RigidBody {
         if (v_T_norm > 1e-6f) {
             a = std::max(1.f - muT * (1.f + current_muN) * v_N_norm / v_T_norm, 0.f);
         }
+        if (v_T_norm < 0.01f) a = 0.0f;
         glm::vec3 v_rel_new = a * v_T - current_muN * v_N + v_bias * contact.c_normal;
 
         glm::mat3 K = get_K(body1, r1) + get_K(body2, r2);
-        return (glm::inverse(K + glm::mat3(1e-9f)) * (v_rel_new - v_rel)) * contact.weight;
+        glm::vec3 J = (glm::inverse(K + glm::mat3(1e-6f)) * (v_rel_new - v_rel)) * contact.weight;
+        if (glm::dot(J, contact.c_normal) < 0) return glm::vec3(0.f);
+        return J;
     }
 }
