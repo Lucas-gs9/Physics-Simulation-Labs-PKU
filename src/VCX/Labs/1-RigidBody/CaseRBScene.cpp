@@ -5,6 +5,9 @@ namespace VCX::Labs::RigidBody {
         _system.Clear();
         _system.enableGravity = true;
         _system.enableDamp    = false;
+        _stopped              = false;
+        _controlCamera        = true;
+        _isDragging           = false;
 
         float floorSize     = 50.0f;
         float floorThickness   = 0.5f;
@@ -42,34 +45,39 @@ namespace VCX::Labs::RigidBody {
         _system.AddBody(wallF);
 
         auto box1 = std::make_shared<RigidBody>(1.f, std::make_shared<BoxShape>(glm::vec3(1.f, 1.f, 1.f)));
-        box1->x   = { 0.f, -0.05f, 0.f }; 
+        box1->x   = { 0.f, -0.5f, 0.f };
         _system.AddBody(box1);
 
         auto box2 = std::make_shared<RigidBody>(3.f, std::make_shared<BoxShape>(glm::vec3(0.8f, 0.7f, 0.5f)));
-        box2->x   = { 0.f, 1.5f, 0.f };
+        box2->x   = { 0.1f, 0.5f, 0.0f };
         _system.AddBody(box2);
 
         auto box3 = std::make_shared<RigidBody>(5.f, std::make_shared<BoxShape>(glm::vec3(0.8f, 2.f, 0.8f)));
-        box3->x   = { 3.f, 4.0f, -5.f };
-        box3->v   = { 0.f, -2.0f, 0.f };
-        box3->q   = glm::quat(glm::vec3(glm::radians(30.f), glm::radians(60.f), glm::radians(45.f)));
+        box3->x   = { -2.0f, 4.0f, 0.0f };
+        box3->v   = { 4.0f, -2.0f, 0.0f };                             
+        box3->q   = glm::quat(glm::vec3(0.f, 0.f, glm::radians(45.f)));
         _system.AddBody(box3);
+
+        auto box4 = std::make_shared<RigidBody>(2.f, std::make_shared<BoxShape>(glm::vec3(3.0f, 0.2f, 0.5f)));
+        box4->x   = { 0.0f, 2.0f, 4.0f };
+        box4->v   = { 0.0f, 0.0f, -6.0f };
+        box4->w   = { 2.0f, 0.0f, 0.0f }; 
+        _system.AddBody(box4);
 
         float sphereRadius = 1.0f;
         auto  sphere       = std::make_shared<RigidBody>(2.0f, std::make_shared<SphereShape>(sphereRadius));
-        sphere->x          = { 5.0f, 4.0f, -2.0f }; 
-        sphere->v          = { 2.0f, -1.0f, -1.0f };
+        sphere->x          = { 0.0f, 8.0f, 2.0f };
+        sphere->v          = { 0.0f, -5.0f, 0.0f };
         _system.AddBody(sphere);
 
         float cylRadius = 0.6f;
         float cylHeight = 1.5f;
         auto  cylinder  = std::make_shared<RigidBody>(3.0f, std::make_shared<CylinderShape>(cylRadius, cylHeight));
-        cylinder->x     = { 2.0f, 5.0f, 3.0f }; 
-        cylinder->q = glm::angleAxis(glm::radians(90.f), glm::vec3(1, 0, 0));
-        cylinder->w = { 0.5f, 1.0f, 0.0f };
-        glm::mat3 R     = glm::mat3_cast(cylinder->q);
-        glm::mat3 I     = R * cylinder->I_ref * glm::transpose(R);
-        cylinder->L               = I * cylinder->w;
+        cylinder->x     = { 1.5f, 3.0f, 0.0f };
+        cylinder->q = glm::angleAxis(glm::radians(90.f), glm::vec3(0, 0, 1));
+        cylinder->w = { 0.0f, 0.0f, 5.0f }; 
+        glm::mat3 R_cyl = glm::mat3_cast(cylinder->q);
+        cylinder->L     = (R_cyl * cylinder->I_ref * glm::transpose(R_cyl)) * cylinder->w;
         _system.AddBody(cylinder);
     }
 

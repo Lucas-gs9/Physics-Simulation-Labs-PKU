@@ -26,14 +26,6 @@ namespace VCX::Labs::RigidBody {
         v *= damp_v;
         w *= damp_w;
         L = R * I_ref * glm::transpose(R) * w;
-
-        if (glm::length(v) < 0.08f) v = glm::vec3(0.f);
-        if (glm::length(w) < 0.08f) {
-            w = glm::vec3(0.f);
-            L = glm::vec3(0.f);
-        }
-        f      = glm::vec3(0.f);
-        torque = glm::vec3(0.f);
     }
 
     void RigidBody::AddForce(glm::vec3 const& force, glm::vec3 const& f_point) {
@@ -62,5 +54,14 @@ namespace VCX::Labs::RigidBody {
         w += I_inv * glm::cross(r, impulse);
         glm::mat3 I = R * I_ref * glm::transpose(R);
         L           = I * w;
+    }
+    void RigidBody::ClearForce() {
+        f      = glm::vec3(0.f);
+        torque = glm::vec3(0.f);
+        if (glm::length(v) < 0.08f) v = glm::vec3(0.f);
+        if (glm::length(w) < 0.1f) {
+            w = glm::vec3(0.f);
+            L = glm::vec3(0.f);
+        }
     }
 }

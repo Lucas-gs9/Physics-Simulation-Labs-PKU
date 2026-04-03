@@ -84,6 +84,8 @@ namespace VCX::Labs::RigidBody {
     void CaseRBStack::Reset() {
         _system.Clear();
         _system.enableGravity = true;
+        _controlCamera        = true;
+        _isDragging           = false;
         float floorSize       = 20.0f;
         float floorThickness  = 0.5f;
 
@@ -121,7 +123,7 @@ namespace VCX::Labs::RigidBody {
             base1->x = { 0.f, -0.2f, 0 };
             _system.AddBody(base1);
 
-            auto base2 = std::make_shared<RigidBody>(8.0f, std::make_shared<BoxShape>(glm::vec3(0.3f, 1.5f, 0.3f)));
+            auto base2 = std::make_shared<RigidBody>(8.0f, std::make_shared<BoxShape>(glm::vec3(0.1f, 1.5f, 0.1f)));
             base2->x = { 0, 1.f, 0 };
             _system.AddBody(base2);
 

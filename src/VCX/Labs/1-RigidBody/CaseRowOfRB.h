@@ -17,6 +17,7 @@ namespace VCX::Labs::RigidBody {
 
         bool      _stopped = false;
         int  _objId   = 0;
+        float     _initv   = 10.f;
 
         CaseRowOfRB();
         virtual std::string_view const   GetName() override { return "Newton's pendulum simulation"; }

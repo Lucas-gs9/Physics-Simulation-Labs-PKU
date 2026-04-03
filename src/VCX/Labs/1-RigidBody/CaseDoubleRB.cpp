@@ -86,8 +86,8 @@ namespace VCX::Labs::RigidBody {
             if (ImGui::Button("Reset System")) LoadCase();
             ImGui::SameLine();
             if (ImGui::Button(_stopped ? "Start Simulation" : "Stop Simulation")) _stopped = ! _stopped;
-            ImGui::SliderFloat("init V_left", &_v_left, 0, 10);
-            ImGui::SliderFloat("init V_right", &_v_right, 0, 10);
+            ImGui::SliderFloat("init V_left", &_v_left, 0, 50);
+            ImGui::SliderFloat("init V_right", &_v_right, 0, 50);
             const char * scNames[] = { "Scene 1", "Scene 2", "Scene 3", "Scene 4", "Scene 5" };
             if (ImGui::Combo("Set Scene", &_caseId, scNames, IM_ARRAYSIZE(scNames))) {
                 LoadCase();

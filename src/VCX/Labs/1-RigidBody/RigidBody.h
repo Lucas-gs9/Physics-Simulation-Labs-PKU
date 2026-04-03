@@ -88,9 +88,10 @@ namespace VCX::Labs::RigidBody {
         glm::vec3 torque { 0.f };
 
         RigidBody(float mass, std::shared_ptr<Shape> s);
-        void Update(float dt, float damp_v = 0.999f, float damp_w = 0.999f);
+        void Update(float dt, float damp_v = 0.999f, float damp_w = 0.995f);
         void AddForce(glm::vec3 const & force, glm::vec3 const & f_point);
         void Reset(glm::vec3 const & v0);
         void ApplyImpulse(glm::vec3 const & impulse, glm::vec3 const & i_point);
+        void ClearForce();
     };
 } // namespace VCX::Labs::RigidBody

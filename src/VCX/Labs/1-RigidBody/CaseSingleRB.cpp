@@ -45,6 +45,7 @@ namespace VCX::Labs::RigidBody {
             float dt = ImGui::GetIO().DeltaTime;
             if (dt > 0.1f) dt = 0.1f;
             _body->Update(dt);
+            _body->ClearForce();
         }
         
         _windowSize = desiredSize;

@@ -11,6 +11,7 @@ namespace VCX::Labs::RigidBody {
             if (ImGui::Button("Reset System")) Reset();
             ImGui::SameLine();
             if (ImGui::Button(_stopped ? "Start Simulation" : "Stop Simulation")) _stopped = ! _stopped;
+            ImGui::SliderFloat("init V", &_initv, 5, 50);
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::ColorEdit3("Box Color", glm::value_ptr(_renderer.objColor));
@@ -27,6 +28,10 @@ namespace VCX::Labs::RigidBody {
             float dt = ImGui::GetIO().DeltaTime;
             if (dt > 0.1f) dt = 0.1f;
             _system.Update(dt);
+            for (auto body : _system.bodies) {
+                body->v.y = 0.f;
+                if (! body->isStatic) body->x.y = -0.24f;
+            }
         }
 
         _windowSize = desiredSize;
@@ -48,7 +53,8 @@ namespace VCX::Labs::RigidBody {
     void CaseRowOfRB::Reset() {
         _system.Clear();
         _system.enableGravity = false;
-        _system.muN           = 1.02f;
+        _system.enableDamp    = false;
+        _system.muN           = 1.f;
         _system.muT           = 0.f;
         _system.beta          = 0.f;
 
@@ -92,7 +98,7 @@ namespace VCX::Labs::RigidBody {
                 box->q = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
                 if (i == 0) {
-                    box->v = { -10.0f, 0.0f, 0.0f };
+                    box->v = { -_initv, 0.0f, 0.0f };
                     box->w = { 0.0f, 0.0f, 0.0f };
                 } else {
                     box->v = { 0.f, 0.f, 0.f };
@@ -113,7 +119,7 @@ namespace VCX::Labs::RigidBody {
                 obj->q = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
                 if (i == 0) {
-                    obj->v = { -10.0f, 0.0f, 0.0f };
+                    obj->v = { -_initv, 0.0f, 0.0f };
                     obj->w = { 0.0f, 0.0f, 0.0f };
                 } else {
                     obj->v = { 0.f, 0.f, 0.f };

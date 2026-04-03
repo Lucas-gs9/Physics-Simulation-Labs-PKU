@@ -12,40 +12,50 @@ namespace VCX::Labs::RigidBody {
 
     void RigidBodySystem::Update(float dt) {
 
+        const int subSteps = 5;
+        float subdt = dt / subSteps;
+
         if (enableGravity) {
             for (auto const & body : bodies) {
                 body->AddForce(body->m * glm::vec3(0.f, -g, 0.f), body->x);
             }
         }
 
-        contacts.clear();
-        int n = bodies.size();
-        for (int i = 0; i < n; ++i) 
-            for (int j = i + 1; j < n; ++j) {
-                CollisionDetect(i, j);
-            }
+        for (int step = 0; step < subSteps; ++step) {
 
-        const int numIterations = 25;
+            contacts.clear();
+            int n = bodies.size();
+            for (int i = 0; i < n; ++i)
+                for (int j = i + 1; j < n; ++j) {
+                    CollisionDetect(i, j);
+                }
 
-        for (int i = 0; i < numIterations; ++i) {
-            std::vector<glm::vec3> impulse_list;
-            for (auto const & contact : contacts) {
-                impulse_list.push_back(GetCollisionImpulse(contact, dt));
-            }
-            for (int k = 0; k < contacts.size(); ++k) {
-                auto const & contact = contacts[k];
-                glm::vec3    J       = impulse_list[k];
-                for (auto const & pos : contact.pos_list) {
-                    bodies[contact.id1]->ApplyImpulse(-J, pos);
-                    bodies[contact.id2]->ApplyImpulse(J, pos);
+            const int numIterations = 15;
+
+            for (int i = 0; i < numIterations; ++i) {
+                std::vector<glm::vec3> impulse_list;
+                for (auto const & contact : contacts) {
+                    impulse_list.push_back(GetCollisionImpulse(contact, subdt));
+                }
+                for (int k = 0; k < contacts.size(); ++k) {
+                    auto const & contact = contacts[k];
+                    glm::vec3    J       = impulse_list[k];
+                    for (auto const & pos : contact.pos_list) {
+                        bodies[contact.id1]->ApplyImpulse(-J, pos);
+                        bodies[contact.id2]->ApplyImpulse(J, pos);
+                    }
                 }
             }
+
+            for (auto & body : bodies) {
+                if (enableDamp)
+                    body->Update(subdt, 0.9996,0.999);
+                else
+                    body->Update(subdt, 1.f, 1.f);
+            }
         }
-        for (auto & body : bodies) {
-            if (enableDamp)
-                body->Update(dt);
-            else
-                body->Update(dt, 1.f, 1.f);
+        for (auto& body : bodies) {
+            body->ClearForce();
         }
     }
 
@@ -87,7 +97,7 @@ namespace VCX::Labs::RigidBody {
         glm::vec3   r1    = contact.c_pos - body1.x;
         glm::vec3   r2    = contact.c_pos - body2.x;
         if (body1.shape->GetType() == Shape::Type::Sphere) r1 = contact.c_normal * (-std::static_pointer_cast<SphereShape>(body1.shape)->radius);
-        if (body2.shape->GetType() == Shape::Type::Sphere) r2 = contact.c_normal * (-std::static_pointer_cast<SphereShape>(body1.shape)->radius);
+        if (body2.shape->GetType() == Shape::Type::Sphere) r2 = contact.c_normal * (-std::static_pointer_cast<SphereShape>(body2.shape)->radius);
         glm::vec3 v1 = body1.v + glm::cross(body1.w, r1);
         glm::vec3   v2    = body2.v + glm::cross(body2.w, r2);
 
@@ -95,7 +105,7 @@ namespace VCX::Labs::RigidBody {
         float     v_dot_n = glm::dot(v_rel, contact.c_normal);
         if (v_dot_n > 0.f && contact.depth < 0.001f) return { 0.f, 0.f, 0.f };
 
-        float slop = 0.005f;
+        float slop = 0.003f;
         float v_bias = (beta / dt) * std::max(0.f, contact.depth - slop);
         v_bias       = std::min(v_bias, 0.5f);
 
@@ -112,7 +122,7 @@ namespace VCX::Labs::RigidBody {
         if (v_T_norm > 1e-6f) {
             a = std::max(1.f - muT * (1.f + current_muN) * v_N_norm / v_T_norm, 0.f);
         }
-        if (v_T_norm < 0.01f) a = 0.0f;
+        if (v_T_norm < 0.005f) a = 0.0f;
         glm::vec3 v_rel_new = a * v_T - current_muN * v_N + v_bias * contact.c_normal;
 
         glm::mat3 K = get_K(body1, r1) + get_K(body2, r2);
