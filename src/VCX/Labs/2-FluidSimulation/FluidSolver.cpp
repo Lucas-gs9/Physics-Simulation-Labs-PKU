@@ -60,4 +60,49 @@ namespace VCX::Labs::Fluid {
             }
         }
     }
+
+    void HybridSolver::pushParticlesApart(int numIters) {
+        Particles & particles = data.particles;
+        Grid &      grid      = data.grid;
+        SpatialHash & hash      = data.hash;
+        float r = particles.radius;
+
+        for (int n = 0; n < numIters; n++) {
+            hash.build(grid, particles);
+
+            for (int i = 0; i < particles.size(); i++) {
+                glm::vec3&  pos_i = particles.positions[i];
+                glm::ivec3 cell  = grid.getCellCoord(pos_i);
+
+                for (int ni = cell.x - 1; ni <= cell.x + 1; ni++) {
+                    for (int nj = cell.y - 1; nj <= cell.y + 1; nj++) {
+                        for (int nk = cell.z - 1; nk <= cell.z + 1; nk++) {
+                            if (ni < 0 || ni >= grid.nx || nj < 0 || nj >= grid.ny || nk < 0 || nk >= grid.nz)
+                                continue;
+
+                            int cIdx  = grid.cIdx(ni, nj, nk);
+                            int start = hash.cellStart[cIdx];
+                            int end   = hash.cellStart[cIdx + 1];
+
+                            for (int p = start; p < end; p++) {
+                                int j = hash.particleList[p];
+                                if (j <= i) continue;
+
+                                glm::vec3 & pos_j = particles.positions[j];
+                                glm::vec3   d     = pos_i - pos_j;
+                                float       dist  = glm::length(d);
+
+                                if (dist < 2 * r) {
+                                    glm::vec3 s = 0.5f * d * (2 * r - dist) / dist;
+                                    pos_i += s;
+                                    pos_j -= s;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+    }
 }

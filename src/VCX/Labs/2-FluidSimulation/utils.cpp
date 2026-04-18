@@ -2,17 +2,14 @@
 
 namespace VCX::Labs::Fluid {
     template <typename func>
-    float triInterpolate(const std::vector<float>& field, int nx, int ny, int nz, glm::vec3 localPos, func idx) {
-        float x = localPos.x;
-        float y = localPos.y;
-        float z = localPos.z;
+    float triInterpolate(const std::vector<float> & field, glm::vec3 gCoord, func idx) {
+        int x0 = static_cast<int>(std::floor(gCoord.x));
+        int y0 = static_cast<int>(std::floor(gCoord.y));
+        int z0 = static_cast<int>(std::floor(gCoord.z));
 
-        int x0 = std::clamp(int(x), 0, nx - 2);
-        int y0 = std::clamp(int(y), 0, ny - 2);
-        int z0 = std::clamp(int(z), 0, nz - 2);
-        float tx = x - x0;
-        float ty = y - y0;
-        float tz = z - z0;
+        float tx = gCoord.x - static_cast<float>(x0);
+        float ty = gCoord.y - static_cast<float>(y0);
+        float tz = gCoord.z - static_cast<float>(z0);
 
         float v000 = field[idx(x0, y0, z0)];
         float v100 = field[idx(x0 + 1, y0, z0)];

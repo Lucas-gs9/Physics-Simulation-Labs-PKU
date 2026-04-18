@@ -34,11 +34,84 @@ namespace VCX::Labs::Fluid {
         return cIdx(coord.x, coord.y, coord.z);
     }
 
-    glm::vec3 Grid::sampleVelocity(const glm::vec3& worldPos) const {
-        glm::vec3 g = worldToGrid(worldPos);
-        float     uVal = triInterpolate(u, nx + 1, ny, nz, { g.x, g.y - 0.5f, g.z - 0.5f }, [this](int i, int j, int k) { return uIdx(i, j, k); });
-        float     vVal = triInterpolate(v, nx, ny + 1, nz, { g.x - 0.5f, g.y, g.z - 0.5f }, [this](int i, int j, int k) { return vIdx(i, j, k); });
-        float     wVal = triInterpolate(w, nx, ny, nz + 1, { g.x - 0.5f, g.y - 0.5f, g.z }, [this](int i, int j, int k) { return wIdx(i, j, k); });
+    glm::vec3 Grid::sampleVelocity(const glm::vec3 & worldPos, bool isPrev = false) const {
+        glm::vec3 g = worldPos * inv_h;
+        float     uVal, vVal, wVal;
+
+        if (isPrev) {
+            uVal = triInterpolate(u_prev, { g.x, g.y - 0.5f, g.z - 0.5f }, [this](int i, int j, int k) { return uIdx(i, j, k); });
+            vVal = triInterpolate(v_prev, { g.x - 0.5f, g.y, g.z - 0.5f }, [this](int i, int j, int k) { return vIdx(i, j, k); });
+            wVal = triInterpolate(w_prev, { g.x - 0.5f, g.y - 0.5f, g.z }, [this](int i, int j, int k) { return wIdx(i, j, k); });
+        }
+        else {
+            uVal = triInterpolate(u, { g.x, g.y - 0.5f, g.z - 0.5f }, [this](int i, int j, int k) { return uIdx(i, j, k); });
+            vVal = triInterpolate(v, { g.x - 0.5f, g.y, g.z - 0.5f }, [this](int i, int j, int k) { return vIdx(i, j, k); });
+            wVal = triInterpolate(w, { g.x - 0.5f, g.y - 0.5f, g.z }, [this](int i, int j, int k) { return wIdx(i, j, k); });
+        }
+
+        return glm::vec3(uVal, vVal, wVal);
+    }
+
+    void Grid::fillFromParticles(FieldType type, const Particles& particles, const SpatialHash& hash) {
+        std::vector<float>* field;
+        glm::ivec3           fSize;
+        glm::vec3            offset;
+
+        if (type == FieldType::U) {
+            field  = &u;
+            fSize  = { nx + 1, ny, nz };
+            offset = { 0.0f, 0.5f, 0.5f };
+        } else if (type == FieldType::V) {
+            field  = &v;
+            fSize  = { nx, ny + 1, nz };
+            offset = { 0.5f, 0.0f, 0.5f };
+        } else {
+            field  = &w;
+            fSize  = { nx, ny, nz + 1 };
+            offset = { 0.5f, 0.5f, 0.0f };
+        }
+
+        #pragma omp parallel for collapse(3)
+        for (int i = 0; i < fSize.x; ++i) {
+            for (int j = 0; j < fSize.y; ++j) {
+                for (int k = 0; k < fSize.z; ++k) {
+                    glm::vec3  faceGPos = glm::vec3(i, j, k) + offset;
+                    float      sumV = 0.0f, sumW = 0.0f;
+
+                    glm::ivec3 minC = glm::floor(faceGPos - 0.5f);
+                    glm::ivec3 maxC = glm::floor(faceGPos + 0.5f);
+
+                    for (int ni = minC.x; ni <= maxC.x; ++ni) {
+                        for (int nj = minC.y; nj <= maxC.y; ++nj) {
+                            for (int nk = minC.z; nk <= maxC.z; ++nk) {
+                                if (ni < 0 || ni >= nx || nj < 0 || nj >= ny || nk < 0 || nk >= nz) continue;
+
+                                int cIdx = this->cIdx(ni, nj, nk);
+                                for (int p = hash.cellStart[cIdx]; p < hash.cellStart[cIdx + 1]; ++p) {
+                                    int       pIdx  = hash.particleList[p];
+                                    glm::vec3 pGPos = particles.positions[pIdx] * inv_h;
+
+                                    glm::vec3 d = glm::abs(faceGPos - pGPos);
+                                    if (d.x < 1.0f && d.y < 1.0f && d.z < 1.0f) {
+                                        float weight = (1.0f - d.x) * (1.0f - d.y) * (1.0f - d.z);
+
+                                        float pVel = 0.0f;
+                                        if (type == FieldType::U) pVel = particles.velocities[pIdx].x;
+                                        else if (type == FieldType::V) pVel = particles.velocities[pIdx].y;
+                                        else pVel = particles.velocities[pIdx].z;
+
+                                        sumV += pVel * weight;
+                                        sumW += weight;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    int index       = i * fSize.y * fSize.z + j * fSize.z + k;
+                    (*field)[index] = (sumW > 1e-6f) ? (sumV / sumW) : 0.0f;
+                }
+            }
+        }
     }
 
     int Grid::size() const{

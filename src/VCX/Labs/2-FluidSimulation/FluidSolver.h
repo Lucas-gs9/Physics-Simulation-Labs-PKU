@@ -24,5 +24,6 @@ namespace VCX::Labs::Fluid {
     private:
         void integrateParticles(float sdt);
         void handleParticleCollisions(glm::vec3 obstaclePos, float obstacleRad, glm::vec3 obstacleVel);
+        void pushParticlesApart(int numIters);
     };
 }
