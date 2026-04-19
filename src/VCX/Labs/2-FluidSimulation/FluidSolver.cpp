@@ -105,4 +105,60 @@ namespace VCX::Labs::Fluid {
             }
         }
     }
+
+    void HybridSolver::updateParticleDensity() {
+        Grid & grid = data.grid;
+        Particles & particles = data.particles;
+        const SpatialHash & hash      = data.hash;
+        int    nx   = grid.nx;
+        int    ny   = grid.ny;
+        int    nz   = grid.nz;
+        #pragma omp parallel for collapse(3)
+        for (int i = 0; i < nx; i++) {
+            for (int j = 0; j < ny; j++) {
+                for (int k = 0; k < nz; k++) {
+                    int idx = grid.cIdx(i, j, k);
+
+                    if (grid.s_field[idx] == 0.0f) {
+                        grid.type[idx] = CellType::Solid;
+                        continue;
+                    }
+
+                    float     sumWeight = 0.0f;
+                    glm::vec3 cellGPos  = glm::vec3(i + 0.5f, j + 0.5f, k + 0.5f);
+                    for (int ni = i - 1; ni <= i + 1; ++ni) {
+                        for (int nj = j - 1; nj <= j + 1; ++nj) {
+                            for (int nk = k - 1; nk <= k + 1; ++nk) {
+                                if (ni < 0 || ni >= nx || nj < 0 || nj >= ny || nk < 0 || nk >= nz) continue;
+
+                                int neighborCIdx = grid.cIdx(ni, nj, nk);
+                                int pStart       = hash.cellStart[neighborCIdx];
+                                int pEnd         = hash.cellStart[neighborCIdx + 1];
+
+                                for (int p = pStart; p < pEnd; ++p) {
+                                    int       pIdx  = hash.particleList[p];
+                                    glm::vec3 pGPos = particles.positions[pIdx] * grid.inv_h;
+
+                                    glm::vec3 d = glm::abs(cellGPos - pGPos);
+                                    if (d.x < 1.0f && d.y < 1.0f && d.z < 1.0f) {
+                                        sumWeight += (1.0f - d.x) * (1.0f - d.y) * (1.0f - d.z);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    int centerIdx  = grid.cIdx(cellGPos.x, cellGPos.y, cellGPos.z);
+                    grid.density[centerIdx] = sumWeight;
+
+                    if (sumWeight > 0.0001f) {
+                        grid.type[centerIdx] = CellType::Fluid;
+                    } else {
+                        grid.type[centerIdx] = CellType::Empty;
+                    }
+                }
+            }
+        }
+    }
+
 }
