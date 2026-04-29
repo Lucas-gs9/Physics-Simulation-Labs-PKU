@@ -1,11 +1,110 @@
 #include "FluidSolver.h"
 namespace VCX::Labs::Fluid {
     void HybridSolver::step(float dt) {
+        float sdt = dt / numSubSteps;
+        glm::vec3 obstaclePos(0.0f); // obstacle can be moved with mouse, as a user interaction
+        glm::vec3 obstacleVel(0.0f);
+        for (int step = 0; step < numSubSteps; step++) {
+            integrateParticles(sdt);
+            handleParticleCollisions(obstaclePos, 0.0, obstacleVel);
+            if (separateParticles) {
+                pushParticlesApart(numParticleIters);
+                handleParticleCollisions(obstaclePos, 0.0, obstacleVel);
+            }
+            data.hash.build(data.grid, data.particles);
 
+            tStrategy->transferToGrid(data.grid, data.particles, data.hash);
+            data.grid.u_prev = data.grid.u;
+            data.grid.v_prev = data.grid.v;
+            data.grid.w_prev = data.grid.w;
+
+            updateParticleDensity();
+            iStrategy->solve(data.grid, numPressureIters, sdt, overRelaxation, compensateDrift);
+            tStrategy->transferFromGrid(data.grid, data.particles);
+        }
     }
 
     void HybridSolver::reset() {
+        auto & grid      = data.grid;
+        auto & particles = data.particles;
+        auto & hash      = data.hash;
+        
+        //set up the scene
+        int       res = 32;
+        glm::vec3 tankSize(1.0f);
+        glm::vec3 waterRatio(0.6f, 0.8f, 0.6f);
 
+        float h        = tankSize.y / res;
+        float p_radius = 0.3f * h;
+
+        grid.reset(res, res, res, h);
+        particles.clear();
+        particles.radius = p_radius;
+
+        //calculate for the particles
+        float dx = 2.0f * p_radius;
+        float dy = std::sqrt(3.0f) / 2.0f * dx;
+        float dz = dx;
+
+        float margin = h + p_radius;
+        int   numX   = std::floor((waterRatio.x * tankSize.x - 2.0f * margin) / dx);
+        int   numY   = std::floor((waterRatio.y * tankSize.y - 2.0f * margin) / dy);
+        int   numZ   = std::floor((waterRatio.z * tankSize.z - 2.0f * margin) / dz);
+
+        //generate particles
+        data.particles.resize(numX * numY * numZ);
+        int pIdx = 0;
+        for (int j = 0; j < numY; ++j) {
+            for (int i = 0; i < numX; ++i) {
+                for (int k = 0; k < numZ; ++k) {
+                    float offsetX = (j % 2 == 0) ? 0.0f : p_radius;
+                    float offsetZ = (j % 2 == 0) ? 0.0f : p_radius;
+
+                    glm::vec3 pos(
+                        margin + dx * i + offsetX,
+                        margin + dy * j,
+                        margin + dz * k + offsetZ);
+
+                    particles.positions[pIdx]  = pos - glm::vec3(0.5f);
+                    particles.velocities[pIdx] = glm::vec3(0.0f);
+                    particles.colors[pIdx]     = glm::vec3(0.2f, 0.5f, 1.0f);
+                    pIdx++;
+                }
+            }
+        }
+
+        //set grid boundaries
+        for (int i = 0; i < grid.nx; ++i) {
+            for (int j = 0; j < grid.ny; ++j) {
+                for (int k = 0; k < grid.nz; ++k) {
+                    int cidx = grid.cIdx(i, j, k);
+                    if (i <= 1 || i >= grid.nx - 2 || j <= 1 || j >= grid.ny - 2 || k <= 1 || k >= grid.nz - 2) {
+                        grid.s_field[cidx] = 0.0f; 
+                        grid.type[cidx]    = CellType::Solid;
+                    } else {
+                        grid.s_field[cidx] = 1.0f;
+                        grid.type[cidx]    = CellType::Empty;
+                    }
+                }
+            }
+        }
+
+        hash.build(grid, particles);
+
+        float sum   = 0.0f;
+        int   count = 0;
+        for (int i = 0; i < data.grid.size(); ++i) {
+            if (data.grid.type[i] == CellType::Fluid) {
+                sum += data.grid.density[i];
+                count++;
+            }
+        }
+
+        if (count > 0) {
+            restDensity = sum / count;
+        } else {
+            restDensity = 1.0f;
+        }
     }
 
     void HybridSolver::integrateParticles(float sdt) {
@@ -113,6 +212,7 @@ namespace VCX::Labs::Fluid {
         int    nx   = grid.nx;
         int    ny   = grid.ny;
         int    nz   = grid.nz;
+
         #pragma omp parallel for collapse(3)
         for (int i = 0; i < nx; i++) {
             for (int j = 0; j < ny; j++) {
@@ -121,6 +221,7 @@ namespace VCX::Labs::Fluid {
 
                     if (grid.s_field[idx] == 0.0f) {
                         grid.type[idx] = CellType::Solid;
+                        grid.density[idx] = 0.0f;
                         continue;
                     }
 
@@ -148,13 +249,12 @@ namespace VCX::Labs::Fluid {
                         }
                     }
 
-                    int centerIdx  = grid.cIdx(cellGPos.x, cellGPos.y, cellGPos.z);
-                    grid.density[centerIdx] = sumWeight;
+                    grid.density[idx] = sumWeight;
 
-                    if (sumWeight > 0.0001f) {
-                        grid.type[centerIdx] = CellType::Fluid;
+                    if (sumWeight > 0.01f) {
+                        grid.type[idx] = CellType::Fluid;
                     } else {
-                        grid.type[centerIdx] = CellType::Empty;
+                        grid.type[idx] = CellType::Empty;
                     }
                 }
             }

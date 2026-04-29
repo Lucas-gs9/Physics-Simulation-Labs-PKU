@@ -2,6 +2,8 @@
 
 namespace VCX::Labs::Fluid {
     void FlipStrategy::transferToGrid(Grid& grid, const Particles& particles, const SpatialHash& hash){
+        grid.resetStep();
+
         grid.fillFromParticles(FieldType::U, particles, hash);
         grid.fillFromParticles(FieldType::V, particles, hash);
         grid.fillFromParticles(FieldType::W, particles, hash);

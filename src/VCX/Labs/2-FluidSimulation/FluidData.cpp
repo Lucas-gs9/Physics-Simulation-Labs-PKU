@@ -119,6 +119,10 @@ namespace VCX::Labs::Fluid {
     }
 
     void Grid::resetStep() {
+        u_prev = u;
+        v_prev = v;
+        w_prev = w;
+
         std::fill(u.begin(), u.end(), 0.f);
         std::fill(v.begin(), v.end(), 0.f);
         std::fill(w.begin(), w.end(), 0.f);
@@ -131,14 +135,15 @@ namespace VCX::Labs::Fluid {
         nz    = resZ;
         h     = spacing;
         inv_h = 1.f / spacing;
-        int N = nx * ny * nz;
 
-        u.assign(N, 0.f);
-        v.assign(N, 0.f);
-        w.assign(N, 0.f);
-        u_prev.assign(N, 0.f);
-        v_prev.assign(N, 0.f);
-        w_prev.assign(N, 0.f);
+        u.assign((nx + 1) * ny * nz, 0.f);
+        v.assign(nx * (ny + 1) * nz, 0.f);
+        w.assign(nx * ny * (nz + 1), 0.f);
+        u_prev.assign(u.size(), 0.f);
+        v_prev.assign(v.size(), 0.f);
+        w_prev.assign(w.size(), 0.f);
+
+        int N = nx * ny * nz;
         pressure.assign(N, 0.f);
         s_field.assign(N, 1.f);
         type.assign(N, CellType::Empty);

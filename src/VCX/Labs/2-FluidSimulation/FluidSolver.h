@@ -1,5 +1,8 @@
 #pragma once
 #include "FluidData.h"
+#include <memory>
+#include "TransferStrategy.h"
+#include "IncompressibilityStrategy.h"
 
 namespace VCX::Labs::Fluid {
     class FluidSolver {
@@ -17,6 +20,16 @@ namespace VCX::Labs::Fluid {
     class HybridSolver : public FluidSolver {
     public:
         float flipRatio = 0.95f;
+        std::unique_ptr<IncompressibilityStrategy> iStrategy;
+        std::unique_ptr<TransferStrategy>          tStrategy;
+
+        int   numSubSteps       = 1;
+        int   numParticleIters  = 5;
+        int   numPressureIters  = 30;
+        bool  separateParticles = true;
+        float overRelaxation    = 1.9;
+        bool  compensateDrift   = true;
+        float restDensity       = 0.0f;
 
         void step(float dt) override;
         void reset() override;
