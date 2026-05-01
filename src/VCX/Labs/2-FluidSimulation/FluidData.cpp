@@ -37,19 +37,23 @@ namespace VCX::Labs::Fluid {
         return (coord.x * ny * nz) + (coord.y * nz) + coord.z;
     }
 
-    glm::vec3 Grid::sampleVelocity(const glm::vec3 & worldPos, bool isPrev) const {
+    glm::vec3 Grid::sampleVelocity(const glm::vec3 & worldPos, bool isPrev, bool isLinear) const {
         glm::vec3 g = worldPos * inv_h;
         float     uVal, vVal, wVal;
 
-        if (isPrev) {
-            uVal = triInterpolate(u_prev, { g.x, g.y - 0.5f, g.z - 0.5f }, [this](int i, int j, int k) { return uIdx(i, j, k); });
-            vVal = triInterpolate(v_prev, { g.x - 0.5f, g.y, g.z - 0.5f }, [this](int i, int j, int k) { return vIdx(i, j, k); });
-            wVal = triInterpolate(w_prev, { g.x - 0.5f, g.y - 0.5f, g.z }, [this](int i, int j, int k) { return wIdx(i, j, k); });
+        auto & u_f = isPrev ? u_prev : u;
+        auto & v_f = isPrev ? v_prev : v;
+        auto & w_f = isPrev ? w_prev : w;
+
+        if (isLinear) {
+            uVal = triInterpolate(u_f, { g.x, g.y - 0.5f, g.z - 0.5f }, [this](int i, int j, int k) { return uIdx(i, j, k); });
+            vVal = triInterpolate(v_f, { g.x - 0.5f, g.y, g.z - 0.5f }, [this](int i, int j, int k) { return vIdx(i, j, k); });
+            wVal = triInterpolate(w_f, { g.x - 0.5f, g.y - 0.5f, g.z }, [this](int i, int j, int k) { return wIdx(i, j, k); });
         }
         else {
-            uVal = triInterpolate(u, { g.x, g.y - 0.5f, g.z - 0.5f }, [this](int i, int j, int k) { return uIdx(i, j, k); });
-            vVal = triInterpolate(v, { g.x - 0.5f, g.y, g.z - 0.5f }, [this](int i, int j, int k) { return vIdx(i, j, k); });
-            wVal = triInterpolate(w, { g.x - 0.5f, g.y - 0.5f, g.z }, [this](int i, int j, int k) { return wIdx(i, j, k); });
+            uVal = quadInterpolate(u_f, { g.x, g.y - 0.5f, g.z - 0.5f }, [this](int i, int j, int k) { return uIdx(i, j, k); });
+            vVal = quadInterpolate(v_f, { g.x - 0.5f, g.y, g.z - 0.5f }, [this](int i, int j, int k) { return vIdx(i, j, k); });
+            wVal = quadInterpolate(w_f, { g.x - 0.5f, g.y - 0.5f, g.z }, [this](int i, int j, int k) { return wIdx(i, j, k); });
         }
 
         return glm::vec3(uVal, vVal, wVal);
@@ -83,8 +87,8 @@ namespace VCX::Labs::Fluid {
 
                     glm::vec3 xi = faceGPos * h;
 
-                    glm::ivec3 minC = glm::floor(faceGPos - 1.f);
-                    glm::ivec3 maxC = glm::floor(faceGPos + 1.f);
+                    glm::ivec3 minC = glm::floor(faceGPos - 1.5f);
+                    glm::ivec3 maxC = glm::floor(faceGPos + 1.5f);
 
                     for (int ni = minC.x; ni <= maxC.x; ++ni) {
                         for (int nj = minC.y; nj <= maxC.y; ++nj) {
@@ -97,21 +101,28 @@ namespace VCX::Labs::Fluid {
                                     glm::vec3 pGPos = particles.positions[pIdx] * inv_h;
 
                                     glm::vec3 d = glm::abs(faceGPos - pGPos);
-                                    if (d.x < 1.0f && d.y < 1.0f && d.z < 1.0f) {
-                                        float weight = (1.0f - d.x) * (1.0f - d.y) * (1.0f - d.z);
 
+                                    float weight = 0.0f;
+                                    if (useC) {
+                                        if (d.x < 1.5f && d.y < 1.5f && d.z < 1.5f) {
+                                            weight = quadraticKernel(d.x) * quadraticKernel(d.y) * quadraticKernel(d.z);
+                                        }
+                                    } else {
+                                        if (d.x < 1.0f && d.y < 1.0f && d.z < 1.0f) {
+                                            weight = (1.0f - d.x) * (1.0f - d.y) * (1.0f - d.z);
+                                        }
+                                    }
+
+                                    if (weight > 1e-9f) {
                                         float pVel = 0.0f;
                                         if (! useC) {
-                                            if (type == FieldType::U) pVel = particles.velocities[pIdx].x;
-                                            else if (type == FieldType::V) pVel = particles.velocities[pIdx].y;
-                                            else pVel = particles.velocities[pIdx].z;
-                                        }
-                                        else {
+                                            pVel = (&particles.velocities[pIdx].x)[(int) type];
+                                        } else {
                                             glm::vec3 xp         = particles.positions[pIdx];
-                                            glm::vec3 affineTerm = particles.c_mat[pIdx] * (xi - xp);
-                                            if (type == FieldType::U) pVel = particles.velocities[pIdx].x + affineTerm.x;
-                                            else if (type == FieldType::V) pVel = particles.velocities[pIdx].y + affineTerm.y;
-                                            else pVel = particles.velocities[pIdx].z + affineTerm.z;
+                                            glm::vec3 dist = (xi - xp);
+                                            if (type == FieldType::U) pVel = particles.velocities[pIdx].x + glm::dot(particles.c_mat[pIdx][0], dist);
+                                            else if (type == FieldType::V) pVel = particles.velocities[pIdx].y + glm::dot(particles.c_mat[pIdx][1], dist);
+                                            else pVel = particles.velocities[pIdx].z + glm::dot(particles.c_mat[pIdx][2], dist);
                                         }
 
                                         sumV += pVel * weight;
@@ -131,34 +142,49 @@ namespace VCX::Labs::Fluid {
         }
     }
 
-    glm::vec3 Grid::sampleAffine(FieldType type, const glm::vec3& pos) const{
+    glm::mat3 Grid::sampleAffine(const glm::vec3& pos) const{
         glm::vec3 row { 0.f };
 
-        glm::vec3 offset(0.5f);
-        if (type == FieldType::U) offset.x = 0.0f;
-        else if (type == FieldType::V) offset.y = 0.0f;
-        else if (type == FieldType::W) offset.z = 0.0f;
+        FieldType types[3] = { FieldType::U, FieldType::V, FieldType::W };
 
-        glm::vec3  grid_pos = pos * inv_h - offset;
-        glm::ivec3 base_idx = glm::floor(grid_pos);
-        glm::vec3  weight_f = grid_pos - glm::vec3(base_idx);
+        glm::mat3 C { 0.f };
 
-        for (int i = 0; i <= 1; ++i)
-            for (int j = 0; j <= 1; ++j)
-                for (int k = 0; k <= 1; ++k) {
-                    glm::ivec3 curr_idx = base_idx + glm::ivec3(i, j, k);
 
-                    float weight = (i ? weight_f.x : 1.0f - weight_f.x) * (j ? weight_f.y : 1.0f - weight_f.y) * (k ? weight_f.z : 1.0f - weight_f.z);
-                    float v_val = 0.0f;
-                    if (type == FieldType::U) v_val = u[uIdx(curr_idx.x, curr_idx.y, curr_idx.z)];
-                    else if (type == FieldType::V) v_val = v[vIdx(curr_idx.x, curr_idx.y, curr_idx.z)];
-                    else if (type == FieldType::W) v_val = w[wIdx(curr_idx.x, curr_idx.y, curr_idx.z)];
+        for (int f = 0; f < 3; ++f) {
+            glm::vec3 offset(0.5f);
+            if (f == 0) offset.x = 0.0f;      
+            else if (f == 1) offset.y = 0.0f; 
+            else offset.z = 0.0f;            
 
-                    glm::vec3 xi   = (glm::vec3(curr_idx) + offset) * h;
-                    glm::vec3 dist = xi - pos;
-                    row += weight * v_val * dist;
+            glm::vec3  grid_pos = pos * inv_h - offset;
+            glm::ivec3 base_idx = glm::floor(grid_pos);
+
+            float weightX[3], weightY[3], weightZ[3];
+            for (int m = -1; m <= 1; ++m) {
+                weightX[m + 1] = quadraticKernel(float(base_idx.x + m) - grid_pos.x);
+                weightY[m + 1] = quadraticKernel(float(base_idx.y + m) - grid_pos.y);
+                weightZ[m + 1] = quadraticKernel(float(base_idx.z + m) - grid_pos.z);
+            }
+
+            for (int k = -1; k <= 1; ++k)
+                for (int j = -1; j <= 1; ++j) {
+                    float wyz = weightY[j + 1] * weightZ[k + 1];
+                    for (int i = -1; i <= 1; ++i) {
+                        glm::ivec3 cur = base_idx + glm::ivec3(i, j, k);
+                        glm::vec3  d   = glm::vec3(cur) - grid_pos;
+
+                        float weight = weightX[i + 1] * wyz;
+                        float val = 0.f;
+
+                        if (f == 0) val = u[uIdx(cur.x, cur.y, cur.z)];
+                        else if (f == 1) val = v[vIdx(cur.x, cur.y, cur.z)];
+                        else val = w[wIdx(cur.x, cur.y, cur.z)];
+
+                        C[f] += weight * val * (d * h);
+                    }
                 }
-        return row;
+        }
+        return C * (4.f / (h * h)) * 0.9f;
     }
 
     int Grid::size() const{
@@ -166,10 +192,6 @@ namespace VCX::Labs::Fluid {
     }
 
     void Grid::resetStep() {
-        u_prev = u;
-        v_prev = v;
-        w_prev = w;
-
         std::fill(u.begin(), u.end(), 0.f);
         std::fill(v.begin(), v.end(), 0.f);
         std::fill(w.begin(), w.end(), 0.f);

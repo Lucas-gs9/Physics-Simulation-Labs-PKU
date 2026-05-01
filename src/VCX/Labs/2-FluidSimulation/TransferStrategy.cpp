@@ -2,14 +2,13 @@
 
 namespace VCX::Labs::Fluid {
     void FlipStrategy::transferToGrid(Grid& grid, const Particles& particles, const SpatialHash& hash){
-        grid.resetStep();
-
         grid.fillFromParticles(FieldType::U, particles, hash);
         grid.fillFromParticles(FieldType::V, particles, hash);
         grid.fillFromParticles(FieldType::W, particles, hash);
     }
 
     void FlipStrategy::transferFromGrid(const Grid& grid, Particles& particles){
+#pragma omp parallel for
         for (int i = 0; i < particles.size(); ++i) {
             glm::vec3 pos = particles.positions[i];
 
@@ -25,21 +24,16 @@ namespace VCX::Labs::Fluid {
     }
 
     void ApicStrategy::transferFromGrid(const Grid& grid, Particles& particles) {
+#pragma omp parallel for
         for (int i = 0; i < particles.size(); ++i) {
             glm::vec3 pos = particles.positions[i];
-            particles.velocities[i] = grid.sampleVelocity(pos);
+            particles.velocities[i] = grid.sampleVelocity(pos, false, false);
 
-            particles.c_mat[i][0] = grid.sampleAffine(FieldType::U, pos);
-            particles.c_mat[i][1] = grid.sampleAffine(FieldType::V, pos);
-            particles.c_mat[i][2] = grid.sampleAffine(FieldType::W, pos);
-
-            particles.c_mat[i] *= (4.f / (grid.h * grid.h));
+            particles.c_mat[i] = grid.sampleAffine(pos);
         }
     }
 
     void ApicStrategy::transferToGrid(Grid& grid, const Particles& particles, const SpatialHash& hash) {
-        grid.resetStep();
-
         grid.fillFromParticles(FieldType::U, particles, hash, true);
         grid.fillFromParticles(FieldType::V, particles, hash, true);
         grid.fillFromParticles(FieldType::W, particles, hash, true);

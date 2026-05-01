@@ -26,6 +26,8 @@ namespace VCX::Labs::Fluid {
         std::unique_ptr<HybridSolver> _solver;
 
         std::vector<Assets::ExampleScene> const _scenes;
+        bool                                    _tstrategyChange { true };
+        bool                                    _istrategyChange { true };
         int                                     _tId = 0;
         int                                     _iId = 0;
 

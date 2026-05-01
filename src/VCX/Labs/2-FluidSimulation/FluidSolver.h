@@ -18,15 +18,14 @@ namespace VCX::Labs::Fluid {
 
     class HybridSolver : public FluidSolver {
     public:
-        float flipRatio = 0.95f;
         std::unique_ptr<IncompressibilityStrategy> iStrategy;
         std::unique_ptr<TransferStrategy>          tStrategy;
 
-        int   numSubSteps       = 3;
-        int   numParticleIters  = 2;
-        int   numPressureIters  = 60;
+        int   numSubSteps       = 2;
+        int   numParticleIters  = 1;
+        int   numPressureIters  = 15;
         bool  separateParticles = true;
-        float overRelaxation    = 1.2;
+        float overRelaxation    = 1.9;
         bool  compensateDrift   = true;
         float restDensity       = 8.0f;
 

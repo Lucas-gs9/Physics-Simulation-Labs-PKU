@@ -11,7 +11,7 @@ namespace VCX::Labs::Fluid {
 
     class FlipStrategy : public TransferStrategy {
     public:
-        float flipRatio = 0.95;
+        float flipRatio = 0.95f;
 
         void transferToGrid(Grid & grid, const Particles & particles, const SpatialHash & hash) override;
         void transferFromGrid(const Grid & grid, Particles & particles) override;

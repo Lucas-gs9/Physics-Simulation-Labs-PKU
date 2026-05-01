@@ -65,9 +65,9 @@ namespace VCX::Labs::Fluid {
         glm::vec3 worldToGrid(const glm::vec3 & worldPos) const;
         glm::ivec3 getCellCoord(const glm::vec3 & worldPos) const;
         int       getCellIdx(const glm::vec3 & worldPos) const;
-        glm::vec3  sampleVelocity(const glm::vec3 & worldPos, bool isPrev = false) const;
+        glm::vec3  sampleVelocity(const glm::vec3 & worldPos, bool isPrev = false, bool isLinear = true) const;
         void       fillFromParticles(FieldType type, const Particles & particles, const SpatialHash & hash, bool useC = false);
-        glm::vec3  sampleAffine(FieldType type, const glm::vec3 & pos) const;
+        glm::mat3  sampleAffine(const glm::vec3 & pos) const;
 
         int  size() const;
         void resetStep();

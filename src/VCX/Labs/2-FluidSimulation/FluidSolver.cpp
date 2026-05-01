@@ -13,6 +13,8 @@ namespace VCX::Labs::Fluid {
             }
             handleParticleCollisions(obstaclePos, 0.0, obstacleVel);
 
+            data.grid.resetStep();//clear u,v,w
+
             tStrategy->transferToGrid(data.grid, data.particles, data.hash);
             data.grid.u_prev = data.grid.u;
             data.grid.v_prev = data.grid.v;
@@ -26,14 +28,12 @@ namespace VCX::Labs::Fluid {
     }
 
     void HybridSolver::reset() {
-        if (! tStrategy) tStrategy = std::make_unique<Fluid::FlipStrategy>();
-        if (! iStrategy) iStrategy = std::make_unique<Fluid::GaussSiedelStrategy>();
         auto & grid      = data.grid;
         auto & particles = data.particles;
         auto & hash      = data.hash;
         
         //set up the scene
-        int       res = 18;
+        int       res = 22;
         glm::vec3 tankSize(1.0f);
         glm::vec3 waterRatio(0.6f, 0.8f, 0.6f);
 
@@ -106,9 +106,10 @@ namespace VCX::Labs::Fluid {
 
     void HybridSolver::integrateParticles(float sdt) {
         int numParticles = data.particles.size();
+        glm::vec3 dv           = gravity * sdt;
         #pragma omp parallel for
         for (int i = 0; i < numParticles; ++i) {
-            data.particles.velocities[i] += gravity * sdt;
+            data.particles.velocities[i] += dv;
             data.particles.positions[i] += data.particles.velocities[i] * sdt;
         }
     }
@@ -132,7 +133,7 @@ namespace VCX::Labs::Fluid {
                 p.x = minX;
                 v.x = 0.f;
             }
-            if (p.x > maxX) {
+            else if (p.x > maxX) {
                 p.x = maxX;
                 v.x = 0.f;
             }
@@ -141,7 +142,7 @@ namespace VCX::Labs::Fluid {
                 p.y = minY;
                 v.y = 0.f;
             }
-            if (p.y > maxY) {
+            else if (p.y > maxY) {
                 p.y = maxY;
                 v.y = 0.f;
             }
@@ -150,7 +151,7 @@ namespace VCX::Labs::Fluid {
                 p.z = minZ;
                 v.z = 0.f;
             }
-            if (p.z > maxZ) {
+            else if (p.z > maxZ) {
                 p.z = maxZ;
                 v.z = 0.f;
             }
@@ -163,19 +164,23 @@ namespace VCX::Labs::Fluid {
         SpatialHash & hash      = data.hash;
         float r = particles.radius;
 
+        hash.build(grid, particles);
+
         for (int n = 0; n < numIters; n++) {
-            hash.build(grid, particles);
 
             for (int i = 0; i < particles.size(); i++) {
                 glm::vec3&  pos_i = particles.positions[i];
                 glm::ivec3 cell  = grid.getCellCoord(pos_i);
 
-                for (int ni = cell.x - 1; ni <= cell.x + 1; ni++) {
-                    for (int nj = cell.y - 1; nj <= cell.y + 1; nj++) {
-                        for (int nk = cell.z - 1; nk <= cell.z + 1; nk++) {
-                            if (ni < 0 || ni >= grid.nx || nj < 0 || nj >= grid.ny || nk < 0 || nk >= grid.nz)
-                                continue;
-
+                int x_start = std::max(0, cell.x - 1);
+                int x_end   = std::min(grid.nx - 1, cell.x + 1);
+                int y_start = std::max(0, cell.y - 1);
+                int y_end   = std::min(grid.ny - 1, cell.y + 1);
+                int z_start = std::max(0, cell.z - 1);
+                int z_end   = std::min(grid.nz - 1, cell.z + 1);
+                for (int ni = x_start; ni <= x_end; ni++) {
+                    for (int nj = y_start; nj <= y_end; nj++) {
+                        for (int nk = z_start; nk <= z_end; nk++) {
                             int cIdx  = grid.gridIdx(ni, nj, nk);
                             int start = hash.cellStart[cIdx];
                             int end   = hash.cellStart[cIdx + 1];
@@ -186,13 +191,16 @@ namespace VCX::Labs::Fluid {
 
                                 glm::vec3 & pos_j = particles.positions[j];
                                 glm::vec3   d     = pos_i - pos_j;
-                                float       dist  = glm::length(d);
+                                float       dist2 = glm::dot(d, d);
+                                float       min_dist = 2 * r;
+                                float       min_dist2 = min_dist * min_dist;
 
-                                if (dist > 0.001f && dist < 2 * r) {
+                                if (dist2 > 0.000001f && dist2 < min_dist2) {
+                                    float     dist = sqrt(dist2);
                                     glm::vec3 s = 0.5f * d * (2 * r - dist) / dist;
                                     pos_i += s;
                                     pos_j -= s;
-                                } else if (dist <= 0.001f) {
+                                } else if (dist2 <= 0.000001f) {
                                     pos_i += glm::vec3(0.001f, 0.001f, 0.001f);
                                 }
                             }
@@ -217,12 +225,6 @@ namespace VCX::Labs::Fluid {
             for (int j = 0; j < ny; j++) {
                 for (int k = 0; k < nz; k++) {
                     int idx = grid.cIdx(i, j, k);
-
-                    /* if (grid.s_field[idx] == 0.0f) {
-                        grid.type[idx] = CellType::Solid;
-                        grid.density[idx] = 0.0f;
-                        continue;
-                    }*/
 
                     float     sumWeight = 0.0f;
                     float     solidWeight = 0.0f;
@@ -283,6 +285,7 @@ namespace VCX::Labs::Fluid {
 
         float sum   = 0.0f;
         int   count = 0;
+#pragma omp parallel for reduction(+ : totalSum, totalCount)
         for (int i = 0; i < data.grid.size(); ++i) {
             if (data.grid.type[i] == CellType::Fluid) {
                 sum += data.grid.density[i];
@@ -299,11 +302,12 @@ namespace VCX::Labs::Fluid {
 
     void HybridSolver::updateParticleColor() {
         Particles & particles = data.particles;
+        glm::vec3   coldColor(0.2f, 0.2f, 1.0f);
+        glm::vec3   hotColor(1.0f, 0.2f, 0.2f);
+#pragma omp parallel for
         for (int i = 0; i < particles.size(); ++i) {
             float speed = glm::length(particles.velocities[i]);
-            float t     = glm::clamp(speed / 0.5f, 0.0f, 1.0f);
-            glm::vec3 coldColor(0.2f, 0.2f, 1.0f);
-            glm::vec3 hotColor(1.0f, 0.2f, 0.2f);
+            float t     = glm::clamp(speed * 2.0f, 0.0f, 1.0f);
             particles.colors[i] = glm::mix(coldColor, hotColor, t);
         }
     }

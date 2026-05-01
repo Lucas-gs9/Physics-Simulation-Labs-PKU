@@ -3,14 +3,14 @@
 
 namespace VCX::Labs::Fluid {
     const std::vector<glm::vec3> vertex_pos = {
-        glm::vec3(0.06f, 0.06f, 0.06f),
-        glm::vec3(0.94f, 0.06f, 0.06f),
-        glm::vec3(0.94f, 0.94f, 0.06f),
-        glm::vec3(0.06f, 0.94f, 0.06f),
-        glm::vec3(0.06f, 0.06f, 0.94f),
-        glm::vec3(0.94f, 0.06f, 0.94f),
-        glm::vec3(0.94f, 0.94f, 0.94f),
-        glm::vec3(0.06f, 0.94f, 0.94f)
+        glm::vec3(0.04f, 0.04f, 0.04f),
+        glm::vec3(0.96f, 0.04f, 0.04f),
+        glm::vec3(0.96f, 0.96f, 0.04f),
+        glm::vec3(0.04f, 0.96f, 0.04f),
+        glm::vec3(0.04f, 0.04f, 0.96f),
+        glm::vec3(0.96f, 0.04f, 0.96f),
+        glm::vec3(0.96f, 0.96f, 0.96f),
+        glm::vec3(0.04f, 0.96f, 0.96f)
     };
     const std::vector<std::uint32_t> line_index = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
     
@@ -39,6 +39,12 @@ namespace VCX::Labs::Fluid {
     void CaseFLIP::OnSetupPropsUI() {
         const char * scNames[] = { "FLIP/PIC", "APIC" };
         if (ImGui::Combo("Set Simulator", &_tId, scNames, IM_ARRAYSIZE(scNames))) {
+            _tstrategyChange = true;
+            ResetSystem();
+        }
+        const char * svNames[] = { "Gauss-Siedel", "CG/PCG" };
+        if (ImGui::Combo("Set Solver", &_iId, svNames, IM_ARRAYSIZE(scNames))) {
+            _istrategyChange = true;
             ResetSystem();
         }
         if (ImGui::Button("Reset System"))
@@ -46,8 +52,9 @@ namespace VCX::Labs::Fluid {
         if (ImGui::Button(_stopped ? "Start Simulation" : "Stop Simulation"))
             _stopped = ! _stopped;
         if (_tId==0)
-            ImGui::SliderFloat("FLIP Ratio", &_solver->flipRatio, 0.0f, 1.0f, "%.3f");
-        ImGui::SliderFloat("Time Scale", &_timeScale, 0.2f, 1.0f, "%.3f");
+            ImGui::SliderFloat("FLIP Ratio", &(static_cast<FlipStrategy *>(_solver->tStrategy.get()))->flipRatio, 0.0f, 1.0f, "%.3f");
+        ImGui::SliderFloat("Time Scale", &_timeScale, 0.5f, 1.0f, "%.3f");
+        ImGui::Checkbox("Compensate Drift", &_solver->compensateDrift);
     }
     Common::CaseRenderResult CaseFLIP::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
         if (_recompute) {
@@ -107,10 +114,20 @@ namespace VCX::Labs::Fluid {
     }
 
     void CaseFLIP::ResetSystem() {
-        if (_tId==0) 
-            _solver->tStrategy = std::make_unique<Fluid::FlipStrategy>();
-        else if (_tId==1)
-            _solver->tStrategy = std::make_unique<Fluid::ApicStrategy>();
+        if (_tstrategyChange) {
+            if (_tId == 0)
+                _solver->tStrategy = std::make_unique<Fluid::FlipStrategy>();
+            else if (_tId == 1)
+                _solver->tStrategy = std::make_unique<Fluid::ApicStrategy>();
+            _tstrategyChange = false;
+        }
+        if (_istrategyChange) {
+            if (_iId == 0)
+                _solver->iStrategy = std::make_unique<Fluid::GaussSiedelStrategy>();
+            else if (_iId == 1)
+                _solver->iStrategy = std::make_unique<Fluid::CGStrategy>();
+            _istrategyChange = false;
+        }
         _solver->reset();
         numofSpheres = _solver->data.particles.size();
 

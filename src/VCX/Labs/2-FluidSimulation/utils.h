@@ -31,4 +31,33 @@ namespace VCX::Labs::Fluid {
             glm::mix(glm::mix(v001, v101, tx), glm::mix(v011, v111, tx), ty),
             tz);
     }
+
+    float quadraticKernel(float x);
+
+    template<typename func>
+    inline float quadInterpolate(const std::vector<float> & field, glm::vec3 gCoord, func idx) {
+        if (field.empty()) return 0.0f;
+
+        int i = static_cast<int>(std::round(gCoord.x));
+        int j = static_cast<int>(std::round(gCoord.y));
+        int k = static_cast<int>(std::round(gCoord.z));
+
+        float sum = 0.0f;
+        for (int di = -1; di <= 1; ++di) {
+            for (int dj = -1; dj <= 1; ++dj) {
+                for (int dk = -1; dk <= 1; ++dk) {
+                    int ni = i + di;
+                    int nj = j + dj;
+                    int nk = k + dk;
+
+                    float wx = quadraticKernel(static_cast<float>(ni) - gCoord.x);
+                    float wy = quadraticKernel(static_cast<float>(nj) - gCoord.y);
+                    float wz = quadraticKernel(static_cast<float>(nk) - gCoord.z);
+
+                    sum += wx * wy * wz * field[idx(ni, nj, nk)];
+                }
+            }
+        }
+        return sum;
+    }
 }
