@@ -3,6 +3,7 @@
 
 #include "Engine/app.h"
 #include "CaseFLIP.h"
+#include "CaseAPIC.h"
 #include "Labs/Common/UI.h"
 
 namespace VCX::Labs::Fluid {
@@ -13,7 +14,7 @@ namespace VCX::Labs::Fluid {
 
         std::size_t _caseId = 0;
 
-        std::vector<std::reference_wrapper<Common::ICase>> _cases = { _caseFLIP };
+        std::vector<std::reference_wrapper<Common::ICase>> _cases = { _caseFLIP};
 
     public:
         App();

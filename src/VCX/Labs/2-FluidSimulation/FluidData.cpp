@@ -6,6 +6,7 @@ namespace VCX::Labs::Fluid {
         positions.resize(n);
         velocities.resize(n);
         colors.resize(n, glm::vec3(1.f, 1.f, 1.f));
+        c_mat.resize(n, glm::mat3(0.0f));
     }
 
     void Particles::clear() {
@@ -54,7 +55,7 @@ namespace VCX::Labs::Fluid {
         return glm::vec3(uVal, vVal, wVal);
     }
 
-    void Grid::fillFromParticles(FieldType type, const Particles& particles, const SpatialHash& hash) {
+    void Grid::fillFromParticles(FieldType type, const Particles& particles, const SpatialHash& hash, bool useC) {
         std::vector<float>* field;
         glm::ivec3           fSize;
         glm::vec3            offset;
@@ -80,6 +81,8 @@ namespace VCX::Labs::Fluid {
                     glm::vec3  faceGPos = glm::vec3(i, j, k) + offset;
                     float      sumV = 0.0f, sumW = 0.0f;
 
+                    glm::vec3 xi = faceGPos * h;
+
                     glm::ivec3 minC = glm::floor(faceGPos - 1.f);
                     glm::ivec3 maxC = glm::floor(faceGPos + 1.f);
 
@@ -98,9 +101,18 @@ namespace VCX::Labs::Fluid {
                                         float weight = (1.0f - d.x) * (1.0f - d.y) * (1.0f - d.z);
 
                                         float pVel = 0.0f;
-                                        if (type == FieldType::U) pVel = particles.velocities[pIdx].x;
-                                        else if (type == FieldType::V) pVel = particles.velocities[pIdx].y;
-                                        else pVel = particles.velocities[pIdx].z;
+                                        if (! useC) {
+                                            if (type == FieldType::U) pVel = particles.velocities[pIdx].x;
+                                            else if (type == FieldType::V) pVel = particles.velocities[pIdx].y;
+                                            else pVel = particles.velocities[pIdx].z;
+                                        }
+                                        else {
+                                            glm::vec3 xp         = particles.positions[pIdx];
+                                            glm::vec3 affineTerm = particles.c_mat[pIdx] * (xi - xp);
+                                            if (type == FieldType::U) pVel = particles.velocities[pIdx].x + affineTerm.x;
+                                            else if (type == FieldType::V) pVel = particles.velocities[pIdx].y + affineTerm.y;
+                                            else pVel = particles.velocities[pIdx].z + affineTerm.z;
+                                        }
 
                                         sumV += pVel * weight;
                                         sumW += weight;
@@ -117,6 +129,36 @@ namespace VCX::Labs::Fluid {
                 }
             }
         }
+    }
+
+    glm::vec3 Grid::sampleAffine(FieldType type, const glm::vec3& pos) const{
+        glm::vec3 row { 0.f };
+
+        glm::vec3 offset(0.5f);
+        if (type == FieldType::U) offset.x = 0.0f;
+        else if (type == FieldType::V) offset.y = 0.0f;
+        else if (type == FieldType::W) offset.z = 0.0f;
+
+        glm::vec3  grid_pos = pos * inv_h - offset;
+        glm::ivec3 base_idx = glm::floor(grid_pos);
+        glm::vec3  weight_f = grid_pos - glm::vec3(base_idx);
+
+        for (int i = 0; i <= 1; ++i)
+            for (int j = 0; j <= 1; ++j)
+                for (int k = 0; k <= 1; ++k) {
+                    glm::ivec3 curr_idx = base_idx + glm::ivec3(i, j, k);
+
+                    float weight = (i ? weight_f.x : 1.0f - weight_f.x) * (j ? weight_f.y : 1.0f - weight_f.y) * (k ? weight_f.z : 1.0f - weight_f.z);
+                    float v_val = 0.0f;
+                    if (type == FieldType::U) v_val = u[uIdx(curr_idx.x, curr_idx.y, curr_idx.z)];
+                    else if (type == FieldType::V) v_val = v[vIdx(curr_idx.x, curr_idx.y, curr_idx.z)];
+                    else if (type == FieldType::W) v_val = w[wIdx(curr_idx.x, curr_idx.y, curr_idx.z)];
+
+                    glm::vec3 xi   = (glm::vec3(curr_idx) + offset) * h;
+                    glm::vec3 dist = xi - pos;
+                    row += weight * v_val * dist;
+                }
+        return row;
     }
 
     int Grid::size() const{

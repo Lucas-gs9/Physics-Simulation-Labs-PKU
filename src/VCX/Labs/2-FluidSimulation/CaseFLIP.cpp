@@ -37,11 +37,16 @@ namespace VCX::Labs::Fluid {
     }
 
     void CaseFLIP::OnSetupPropsUI() {
+        const char * scNames[] = { "FLIP/PIC", "APIC" };
+        if (ImGui::Combo("Set Simulator", &_tId, scNames, IM_ARRAYSIZE(scNames))) {
+            ResetSystem();
+        }
         if (ImGui::Button("Reset System"))
             ResetSystem();
         if (ImGui::Button(_stopped ? "Start Simulation" : "Stop Simulation"))
             _stopped = ! _stopped;
-        ImGui::SliderFloat("FLIP Ratio", &_solver->flipRatio, 0.0f, 1.0f, "%.3f");
+        if (_tId==0)
+            ImGui::SliderFloat("FLIP Ratio", &_solver->flipRatio, 0.0f, 1.0f, "%.3f");
         ImGui::SliderFloat("Time Scale", &_timeScale, 0.2f, 1.0f, "%.3f");
     }
     Common::CaseRenderResult CaseFLIP::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
@@ -102,6 +107,10 @@ namespace VCX::Labs::Fluid {
     }
 
     void CaseFLIP::ResetSystem() {
+        if (_tId==0) 
+            _solver->tStrategy = std::make_unique<Fluid::FlipStrategy>();
+        else if (_tId==1)
+            _solver->tStrategy = std::make_unique<Fluid::ApicStrategy>();
         _solver->reset();
         numofSpheres = _solver->data.particles.size();
 

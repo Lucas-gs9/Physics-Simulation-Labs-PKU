@@ -23,4 +23,25 @@ namespace VCX::Labs::Fluid {
             particles.velocities[i] = glm::mix(v_pic, v_flip, flipRatio);
         }
     }
+
+    void ApicStrategy::transferFromGrid(const Grid& grid, Particles& particles) {
+        for (int i = 0; i < particles.size(); ++i) {
+            glm::vec3 pos = particles.positions[i];
+            particles.velocities[i] = grid.sampleVelocity(pos);
+
+            particles.c_mat[i][0] = grid.sampleAffine(FieldType::U, pos);
+            particles.c_mat[i][1] = grid.sampleAffine(FieldType::V, pos);
+            particles.c_mat[i][2] = grid.sampleAffine(FieldType::W, pos);
+
+            particles.c_mat[i] *= (4.f / (grid.h * grid.h));
+        }
+    }
+
+    void ApicStrategy::transferToGrid(Grid& grid, const Particles& particles, const SpatialHash& hash) {
+        grid.resetStep();
+
+        grid.fillFromParticles(FieldType::U, particles, hash, true);
+        grid.fillFromParticles(FieldType::V, particles, hash, true);
+        grid.fillFromParticles(FieldType::W, particles, hash, true);
+    }
 }

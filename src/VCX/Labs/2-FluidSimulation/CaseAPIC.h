@@ -12,28 +12,26 @@
 #include "FluidSolver.h"
 
 namespace VCX::Labs::Fluid {
-    class CaseFLIP : public Common::ICase {
+    class CaseAPIC : public Common::ICase {
     public:
-        CaseFLIP(std::initializer_list<Assets::ExampleScene> && scenes);
+        CaseAPIC(std::initializer_list<Assets::ExampleScene> && scenes);
 
-        virtual std::string_view const GetName() override { return "FLIP Fluid Simulation"; }
+        virtual std::string_view const GetName() override { return "APIC Fluid Simulation"; }
 
         virtual void                     OnSetupPropsUI() override;
         virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
         virtual void                     OnProcessInput(ImVec2 const & pos) override;
 
-    private:
+        private:
         std::unique_ptr<HybridSolver> _solver;
 
         std::vector<Assets::ExampleScene> const _scenes;
-        int                                     _tId = 0;
-        int                                     _iId = 0;
 
         Engine::GL::UniqueProgram         _program;
         Engine::GL::UniqueProgram         _lineprogram;
         Engine::GL::UniqueRenderFrame     _frame;
         VCX::Labs::Rendering::SceneObject _sceneObject;
-        std::size_t                       _sceneIdx { 0 };
+        std::size_t                       _sceneIdx { 1 };
 
         Engine::GL::UniqueIndexedRenderItem _BoundaryItem;
         Engine::Model                       _sphere;
@@ -54,7 +52,7 @@ namespace VCX::Labs::Fluid {
         bool _stopped { false };
         bool _recompute { true };
 
-        void ResetSystem();
+        void                  ResetSystem();
         Engine::Scene const & GetScene(std::size_t const i) const { return VCX::Labs::Rendering::Content::Scenes[std::size_t(_scenes[i])]; }
     };
 }

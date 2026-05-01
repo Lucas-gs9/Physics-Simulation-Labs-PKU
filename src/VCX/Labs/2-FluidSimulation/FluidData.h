@@ -18,6 +18,8 @@ namespace VCX::Labs::Fluid {
         std::vector<glm::vec3> velocities;
         std::vector<glm::vec3> colors;
 
+        std::vector<glm::mat3> c_mat;
+
         float radius;
 
         void resize(int n);
@@ -64,7 +66,8 @@ namespace VCX::Labs::Fluid {
         glm::ivec3 getCellCoord(const glm::vec3 & worldPos) const;
         int       getCellIdx(const glm::vec3 & worldPos) const;
         glm::vec3  sampleVelocity(const glm::vec3 & worldPos, bool isPrev = false) const;
-        void fillFromParticles(FieldType type, const Particles & particles, const SpatialHash & hash);
+        void       fillFromParticles(FieldType type, const Particles & particles, const SpatialHash & hash, bool useC = false);
+        glm::vec3  sampleAffine(FieldType type, const glm::vec3 & pos) const;
 
         int  size() const;
         void resetStep();

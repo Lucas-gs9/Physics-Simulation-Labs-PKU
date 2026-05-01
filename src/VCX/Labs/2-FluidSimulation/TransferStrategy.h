@@ -16,4 +16,10 @@ namespace VCX::Labs::Fluid {
         void transferToGrid(Grid & grid, const Particles & particles, const SpatialHash & hash) override;
         void transferFromGrid(const Grid & grid, Particles & particles) override;
     };
+
+    class ApicStrategy : public TransferStrategy {
+    public:
+        void transferToGrid(Grid & grid, const Particles & particles, const SpatialHash & hash) override;
+        void transferFromGrid(const Grid & grid, Particles & particles) override;
+    };
 }
