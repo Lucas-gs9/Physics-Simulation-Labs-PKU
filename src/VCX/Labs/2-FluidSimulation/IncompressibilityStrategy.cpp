@@ -2,14 +2,24 @@
 
 namespace VCX::Labs::Fluid {
     void GaussSiedelStrategy::solve(Grid& grid, int numIters, float dt, float overRelaxation, bool compensateDrift, float restDensity) {
-        float stiffness = 0.15f;
+        float stiffness = 0.05f;
+
+        grid.v_prev = grid.v;
+        grid.u_prev = grid.u;
+        grid.w_prev = grid.w;
 
         for (int iter = 0; iter < numIters; ++iter) {
-            for (int i = 0; i < grid.nx; ++i) {
-                for (int j = 0; j < grid.ny; ++j) {
-                    for (int k = 0; k < grid.nz; ++k) {
+            bool reverse = (iter % 2 == 1);
+            for (int i_raw = 0; i_raw < grid.nx; ++i_raw) {
+                int i = reverse ? (grid.nx - 1 - i_raw) : i_raw;
+
+                for (int j_raw = 0; j_raw < grid.ny; ++j_raw) {
+                    int j = reverse ? (grid.ny - 1 - j_raw) : j_raw;
+
+                    for (int k_raw = 0; k_raw < grid.nz; ++k_raw) {
+                        int k         = reverse ? (grid.nz - 1 - k_raw) : k_raw;
                         int centerIdx = grid.cIdx(i, j, k);
-                        if (grid.type[centerIdx] != CellType::Fluid) continue;
+                        if (grid.type[centerIdx] == CellType::Solid) continue;
 
                         int idxU0 = grid.uIdx(i, j, k); 
                         int idxU1 = grid.uIdx(i + 1, j, k); 
@@ -19,9 +29,10 @@ namespace VCX::Labs::Fluid {
                         int idxW1 = grid.wIdx(i, j, k + 1);
 
                         float d = grid.u[idxU1] - grid.u[idxU0] + grid.v[idxV1] - grid.v[idxV0] + grid.w[idxW1] - grid.w[idxW0];
+                        d *= overRelaxation;
 
-                        if (compensateDrift && restDensity > 0.0f) {
-                            float rho = grid.density[centerIdx];
+                        float rho = grid.density[centerIdx];
+                        if (compensateDrift && rho > restDensity) {
                             float compression = rho - restDensity;
                             if (compression > 0.0f) {
                                 d -= stiffness * compression;
@@ -38,7 +49,7 @@ namespace VCX::Labs::Fluid {
 
                         if (s <= 0.0f) continue;
 
-                        float msg = (overRelaxation * d) / s;
+                        float msg = d / s;
 
                         grid.u[idxU0] += msg * s0;
                         grid.u[idxU1] -= msg * s1;

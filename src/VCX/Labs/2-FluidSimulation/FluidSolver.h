@@ -12,7 +12,6 @@ namespace VCX::Labs::Fluid {
         virtual void step(float dt) = 0;
         virtual void reset() = 0;
 
-    protected:
         FluidData data;
         glm::vec3 gravity = { 0.0f, -9.8f, 0.0f };
     };
@@ -23,13 +22,13 @@ namespace VCX::Labs::Fluid {
         std::unique_ptr<IncompressibilityStrategy> iStrategy;
         std::unique_ptr<TransferStrategy>          tStrategy;
 
-        int   numSubSteps       = 1;
-        int   numParticleIters  = 5;
-        int   numPressureIters  = 30;
+        int   numSubSteps       = 4;
+        int   numParticleIters  = 3;
+        int   numPressureIters  = 60;
         bool  separateParticles = true;
-        float overRelaxation    = 1.9;
+        float overRelaxation    = 1.2;
         bool  compensateDrift   = true;
-        float restDensity       = 0.0f;
+        float restDensity       = 8.0f;
 
         void step(float dt) override;
         void reset() override;

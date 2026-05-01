@@ -25,6 +25,8 @@ namespace VCX::Labs::Fluid {
         int  size() const;
     };
 
+    struct SpatialHash;
+
     struct Grid {
         int nx, ny, nz;
         float h;
@@ -39,27 +41,22 @@ namespace VCX::Labs::Fluid {
         std::vector<float>     density;
 
         inline int uIdx(int i, int j, int k) const {
-            i = std::clamp(i, 0, nx);
-            j = std::clamp(j, 0, ny - 1);
-            k = std::clamp(k, 0, nz - 1);
-            return (i * ny * nz) + (j * nz) + k;
+            int I = i + 1, J = j + 1, K = k + 1;
+            return (I * (ny + 2) * (nz + 2)) + (J * (nz + 2)) + K;
         }
         inline int vIdx(int i, int j, int k) const {
-            i = std::clamp(i, 0, nx - 1);
-            j = std::clamp(j, 0, ny);
-            k = std::clamp(k, 0, nz - 1);
-            return (i * (ny + 1) * nz) + (j * nz) + k;
+            int I = i + 1, J = j + 1, K = k + 1;
+            return (I * (ny + 3) * (nz + 2)) + (J * (nz + 2)) + K;
         }
         inline int wIdx(int i, int j, int k) const {
-            i = std::clamp(i, 0, nx - 1);
-            j = std::clamp(j, 0, ny - 1);
-            k = std::clamp(k, 0, nz);
-            return (i * ny * (nz + 1)) + (j * (nz + 1)) + k;
+            int I = i + 1, J = j + 1, K = k + 1;
+            return (I * (ny + 2) * (nz + 3)) + (J * (nz + 3)) + K;
         }
         inline int cIdx(int i, int j, int k) const {
-            i = std::clamp(i, 0, nx - 1);
-            j = std::clamp(j, 0, ny - 1);
-            k = std::clamp(k, 0, nz - 1);
+            int I = i + 1, J = j + 1, K = k + 1;
+            return (I * (ny + 2) * (nz + 2)) + (J * (nz + 2)) + K;
+        }
+        inline int gridIdx(int i, int j, int k) const {
             return (i * ny * nz) + (j * nz) + k;
         }
 

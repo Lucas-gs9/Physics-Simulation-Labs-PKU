@@ -9,6 +9,7 @@
 #include "Labs/Common/OrbitCameraManager.h"
 #include "Labs/Scene/Content.h"
 #include "Labs/Scene/SceneObject.h"
+#include "FluidSolver.h"
 
 namespace VCX::Labs::Fluid {
     class CaseFLIP : public Common::ICase {
@@ -22,6 +23,35 @@ namespace VCX::Labs::Fluid {
         virtual void                     OnProcessInput(ImVec2 const & pos) override;
 
     private:
+        std::unique_ptr<HybridSolver> _solver;
+
         std::vector<Assets::ExampleScene> const _scenes;
+
+        Engine::GL::UniqueProgram         _program;
+        Engine::GL::UniqueProgram         _lineprogram;
+        Engine::GL::UniqueRenderFrame     _frame;
+        VCX::Labs::Rendering::SceneObject _sceneObject;
+        std::size_t                       _sceneIdx { 0 };
+
+        Engine::GL::UniqueIndexedRenderItem _BoundaryItem;
+        Engine::Model                       _sphere;
+        Common::OrbitCameraManager          _cameraManager;
+        int                                 numofSpheres;
+        float                               _BndWidth { 2.0 };
+
+        bool  _uniformDirty { true };
+        int   _msaa { 2 };
+        int   _useBlinn { 0 };
+        float _shininess { 32 };
+        float _ambientScale { 1 };
+        bool  _useGammaCorrection { true };
+        int   _attenuationOrder { 2 };
+        int   _bumpMappingPercent { 20 };
+
+        bool _stopped { false };
+        bool _recompute { true };
+
+        void ResetSystem();
+        Engine::Scene const & GetScene(std::size_t const i) const { return VCX::Labs::Rendering::Content::Scenes[std::size_t(_scenes[i])]; }
     };
 }

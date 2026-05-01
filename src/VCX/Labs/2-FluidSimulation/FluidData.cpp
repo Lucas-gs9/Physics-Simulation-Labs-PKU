@@ -1,5 +1,6 @@
 #include "FluidData.h"
 #include "utils.h"
+#include<iostream>
 namespace VCX::Labs::Fluid {
     void Particles::resize(int n) {
         positions.resize(n);
@@ -30,11 +31,12 @@ namespace VCX::Labs::Fluid {
     }
 
     int Grid::getCellIdx(const glm::vec3& worldPos) const{
+        //this is logical idx
         glm::ivec3 coord = getCellCoord(worldPos);
-        return cIdx(coord.x, coord.y, coord.z);
+        return (coord.x * ny * nz) + (coord.y * nz) + coord.z;
     }
 
-    glm::vec3 Grid::sampleVelocity(const glm::vec3 & worldPos, bool isPrev = false) const {
+    glm::vec3 Grid::sampleVelocity(const glm::vec3 & worldPos, bool isPrev) const {
         glm::vec3 g = worldPos * inv_h;
         float     uVal, vVal, wVal;
 
@@ -72,21 +74,21 @@ namespace VCX::Labs::Fluid {
         }
 
         #pragma omp parallel for collapse(3)
-        for (int i = 0; i < fSize.x; ++i) {
-            for (int j = 0; j < fSize.y; ++j) {
-                for (int k = 0; k < fSize.z; ++k) {
+        for (int i = -1; i <= fSize.x; ++i) {
+            for (int j = -1; j <= fSize.y; ++j) {
+                for (int k = -1; k <= fSize.z; ++k) {
                     glm::vec3  faceGPos = glm::vec3(i, j, k) + offset;
                     float      sumV = 0.0f, sumW = 0.0f;
 
-                    glm::ivec3 minC = glm::floor(faceGPos - 0.5f);
-                    glm::ivec3 maxC = glm::floor(faceGPos + 0.5f);
+                    glm::ivec3 minC = glm::floor(faceGPos - 1.f);
+                    glm::ivec3 maxC = glm::floor(faceGPos + 1.f);
 
                     for (int ni = minC.x; ni <= maxC.x; ++ni) {
                         for (int nj = minC.y; nj <= maxC.y; ++nj) {
                             for (int nk = minC.z; nk <= maxC.z; ++nk) {
                                 if (ni < 0 || ni >= nx || nj < 0 || nj >= ny || nk < 0 || nk >= nz) continue;
 
-                                int cIdx = this->cIdx(ni, nj, nk);
+                                int cIdx = this->gridIdx(ni, nj, nk);
                                 for (int p = hash.cellStart[cIdx]; p < hash.cellStart[cIdx + 1]; ++p) {
                                     int       pIdx  = hash.particleList[p];
                                     glm::vec3 pGPos = particles.positions[pIdx] * inv_h;
@@ -107,8 +109,11 @@ namespace VCX::Labs::Fluid {
                             }
                         }
                     }
-                    int index       = i * fSize.y * fSize.z + j * fSize.z + k;
-                    (*field)[index] = (sumW > 1e-6f) ? (sumV / sumW) : 0.0f;
+                    int gridIdx;
+                    if (type == FieldType::U) gridIdx = uIdx(i, j, k);
+                    else if (type == FieldType::V) gridIdx = vIdx(i, j, k);
+                    else gridIdx = wIdx(i, j, k);
+                    (*field)[gridIdx] = (sumW > 1e-6f) ? (sumV / sumW) : 0.0f;
                 }
             }
         }
@@ -136,16 +141,18 @@ namespace VCX::Labs::Fluid {
         h     = spacing;
         inv_h = 1.f / spacing;
 
-        u.assign((nx + 1) * ny * nz, 0.f);
-        v.assign(nx * (ny + 1) * nz, 0.f);
-        w.assign(nx * ny * (nz + 1), 0.f);
+        int ax = nx + 2, ay = ny + 2, az = nz + 2;
+
+        u.assign((ax + 1) * ay * az, 0.f);
+        v.assign(ax * (ay + 1) * az, 0.f);
+        w.assign(ax * ay * (az + 1), 0.f);
         u_prev.assign(u.size(), 0.f);
         v_prev.assign(v.size(), 0.f);
         w_prev.assign(w.size(), 0.f);
 
-        int N = nx * ny * nz;
+        int N = ax * ay * az;
         pressure.assign(N, 0.f);
-        s_field.assign(N, 1.f);
+        s_field.assign(N, 0.f);
         type.assign(N, CellType::Empty);
         density.assign(N, 0.f);
     }

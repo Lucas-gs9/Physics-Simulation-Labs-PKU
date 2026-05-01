@@ -6,12 +6,12 @@ namespace VCX::Labs::Fluid {
         glm::vec3 obstacleVel(0.0f);
         for (int step = 0; step < numSubSteps; step++) {
             integrateParticles(sdt);
+            data.hash.build(data.grid, data.particles);
             handleParticleCollisions(obstaclePos, 0.0, obstacleVel);
             if (separateParticles) {
                 pushParticlesApart(numParticleIters);
-                handleParticleCollisions(obstaclePos, 0.0, obstacleVel);
             }
-            data.hash.build(data.grid, data.particles);
+            handleParticleCollisions(obstaclePos, 0.0, obstacleVel);
 
             tStrategy->transferToGrid(data.grid, data.particles, data.hash);
             data.grid.u_prev = data.grid.u;
@@ -19,18 +19,20 @@ namespace VCX::Labs::Fluid {
             data.grid.w_prev = data.grid.w;
 
             updateParticleDensity();
-            iStrategy->solve(data.grid, numPressureIters, sdt, overRelaxation, compensateDrift);
+            iStrategy->solve(data.grid, numPressureIters, sdt, overRelaxation, compensateDrift, restDensity);
             tStrategy->transferFromGrid(data.grid, data.particles);
         }
     }
 
     void HybridSolver::reset() {
+        if (! tStrategy) tStrategy = std::make_unique<Fluid::FlipStrategy>();
+        if (! iStrategy) iStrategy = std::make_unique<Fluid::GaussSiedelStrategy>();
         auto & grid      = data.grid;
         auto & particles = data.particles;
         auto & hash      = data.hash;
         
         //set up the scene
-        int       res = 32;
+        int       res = 16;
         glm::vec3 tankSize(1.0f);
         glm::vec3 waterRatio(0.6f, 0.8f, 0.6f);
 
@@ -52,7 +54,16 @@ namespace VCX::Labs::Fluid {
         int   numZ   = std::floor((waterRatio.z * tankSize.z - 2.0f * margin) / dz);
 
         //generate particles
-        data.particles.resize(numX * numY * numZ);
+
+        float totalWidthX = (numX - 1) * dx;
+        float totalWidthY = (numY - 1) * dy;
+        float totalWidthZ = (numZ - 1) * dz;
+
+        float startX = (tankSize.x - totalWidthX) * 0.5f;
+        float startY = margin; 
+        float startZ = (tankSize.z - totalWidthZ) * 0.5f;
+
+        particles.resize(numX * numY * numZ);
         int pIdx = 0;
         for (int j = 0; j < numY; ++j) {
             for (int i = 0; i < numX; ++i) {
@@ -61,11 +72,11 @@ namespace VCX::Labs::Fluid {
                     float offsetZ = (j % 2 == 0) ? 0.0f : p_radius;
 
                     glm::vec3 pos(
-                        margin + dx * i + offsetX,
-                        margin + dy * j,
-                        margin + dz * k + offsetZ);
+                        startX + dx * i + offsetX,
+                        startY + dy * j,
+                        startZ + dz * k + offsetZ);
 
-                    particles.positions[pIdx]  = pos - glm::vec3(0.5f);
+                    particles.positions[pIdx]  = pos;
                     particles.velocities[pIdx] = glm::vec3(0.0f);
                     particles.colors[pIdx]     = glm::vec3(0.2f, 0.5f, 1.0f);
                     pIdx++;
@@ -74,11 +85,11 @@ namespace VCX::Labs::Fluid {
         }
 
         //set grid boundaries
-        for (int i = 0; i < grid.nx; ++i) {
-            for (int j = 0; j < grid.ny; ++j) {
-                for (int k = 0; k < grid.nz; ++k) {
+        for (int i = -1; i <= grid.nx; ++i) {
+            for (int j = -1; j <= grid.ny; ++j) {
+                for (int k = -1; k <= grid.nz; ++k) {
                     int cidx = grid.cIdx(i, j, k);
-                    if (i <= 1 || i >= grid.nx - 2 || j <= 1 || j >= grid.ny - 2 || k <= 1 || k >= grid.nz - 2) {
+                    if (i <= 0 || i >= grid.nx - 1 || j <= 0 || j >= grid.ny - 1 || k <= 0 || k >= grid.nz - 1) {
                         grid.s_field[cidx] = 0.0f; 
                         grid.type[cidx]    = CellType::Solid;
                     } else {
@@ -90,21 +101,6 @@ namespace VCX::Labs::Fluid {
         }
 
         hash.build(grid, particles);
-
-        float sum   = 0.0f;
-        int   count = 0;
-        for (int i = 0; i < data.grid.size(); ++i) {
-            if (data.grid.type[i] == CellType::Fluid) {
-                sum += data.grid.density[i];
-                count++;
-            }
-        }
-
-        if (count > 0) {
-            restDensity = sum / count;
-        } else {
-            restDensity = 1.0f;
-        }
     }
 
     void HybridSolver::integrateParticles(float sdt) {
@@ -118,11 +114,11 @@ namespace VCX::Labs::Fluid {
 
     void HybridSolver::handleParticleCollisions(glm::vec3 obstaclePos, float obstacleRad, glm::vec3 obstacleVel) {
         float h = data.grid.h;
-        float r = 0.05f * h;
+        float r = data.particles.radius;
 
-        float minX = r, maxX = data.grid.nx * h - r;
-        float minY = r, maxY = data.grid.ny * h - r;
-        float minZ = r, maxZ = data.grid.nz * h - r;
+        float minX = h + r, maxX = data.grid.nx * h - r - h;
+        float minY = h + r, maxY = data.grid.ny * h - r - h;
+        float minZ = h + r, maxZ = data.grid.nz * h - r - h;
 
         int numParticles = data.particles.size();
 
@@ -133,29 +129,29 @@ namespace VCX::Labs::Fluid {
 
             if (p.x < minX) {
                 p.x = minX;
-                v.x = 0.0f;
+                v.x = 0.f;
             }
             if (p.x > maxX) {
                 p.x = maxX;
-                v.x = 0.0f;
+                v.x = 0.f;
             }
 
             if (p.y < minY) {
                 p.y = minY;
-                v.y = 0.0f;
+                v.y = 0.f;
             }
             if (p.y > maxY) {
                 p.y = maxY;
-                v.y = 0.0f;
+                v.y = 0.f;
             }
 
             if (p.z < minZ) {
                 p.z = minZ;
-                v.z = 0.0f;
+                v.z = 0.f;
             }
             if (p.z > maxZ) {
                 p.z = maxZ;
-                v.z = 0.0f;
+                v.z = 0.f;
             }
         }
     }
@@ -179,7 +175,7 @@ namespace VCX::Labs::Fluid {
                             if (ni < 0 || ni >= grid.nx || nj < 0 || nj >= grid.ny || nk < 0 || nk >= grid.nz)
                                 continue;
 
-                            int cIdx  = grid.cIdx(ni, nj, nk);
+                            int cIdx  = grid.gridIdx(ni, nj, nk);
                             int start = hash.cellStart[cIdx];
                             int end   = hash.cellStart[cIdx + 1];
 
@@ -191,10 +187,12 @@ namespace VCX::Labs::Fluid {
                                 glm::vec3   d     = pos_i - pos_j;
                                 float       dist  = glm::length(d);
 
-                                if (dist < 2 * r) {
+                                if (dist > 0.001f && dist < 2 * r) {
                                     glm::vec3 s = 0.5f * d * (2 * r - dist) / dist;
                                     pos_i += s;
                                     pos_j -= s;
+                                } else if (dist <= 0.001f) {
+                                    pos_i += glm::vec3(0.001f, 0.001f, 0.001f);
                                 }
                             }
                         }
@@ -219,20 +217,21 @@ namespace VCX::Labs::Fluid {
                 for (int k = 0; k < nz; k++) {
                     int idx = grid.cIdx(i, j, k);
 
-                    if (grid.s_field[idx] == 0.0f) {
+                    /* if (grid.s_field[idx] == 0.0f) {
                         grid.type[idx] = CellType::Solid;
                         grid.density[idx] = 0.0f;
                         continue;
-                    }
+                    }*/
 
                     float     sumWeight = 0.0f;
+                    float     solidWeight = 0.0f;
                     glm::vec3 cellGPos  = glm::vec3(i + 0.5f, j + 0.5f, k + 0.5f);
                     for (int ni = i - 1; ni <= i + 1; ++ni) {
                         for (int nj = j - 1; nj <= j + 1; ++nj) {
                             for (int nk = k - 1; nk <= k + 1; ++nk) {
                                 if (ni < 0 || ni >= nx || nj < 0 || nj >= ny || nk < 0 || nk >= nz) continue;
 
-                                int neighborCIdx = grid.cIdx(ni, nj, nk);
+                                int neighborCIdx = grid.gridIdx(ni, nj, nk);
                                 int pStart       = hash.cellStart[neighborCIdx];
                                 int pEnd         = hash.cellStart[neighborCIdx + 1];
 
@@ -248,16 +247,52 @@ namespace VCX::Labs::Fluid {
                             }
                         }
                     }
+                    for (int ni = i - 1; ni <= i + 1; ++ni) {
+                        for (int nj = j - 1; nj <= j + 1; ++nj) {
+                            for (int nk = k - 1; nk <= k + 1; ++nk) {
+                                if (ni < 0 || ni >= nx || nj < 0 || nj >= ny || nk < 0 || nk >= nz || grid.s_field[grid.cIdx(ni, nj, nk)] == 0.0f) {
+                                    glm::vec3 solidCellPos = glm::vec3(ni + 0.5f, nj + 0.5f, nk + 0.5f);
+                                    glm::vec3 d            = glm::abs(cellGPos - solidCellPos);
 
-                    grid.density[idx] = sumWeight;
+                                    if (d.x < 1.0f && d.y < 1.0f && d.z < 1.0f) {
+                                        solidWeight += (1.0f - d.x) * (1.0f - d.y) * (1.0f - d.z);
+                                    }
+                                }
+                            }
+                        }
+                    }
 
-                    if (sumWeight > 0.01f) {
+                    grid.density[idx] = sumWeight + solidWeight;
+                    if (grid.s_field[idx] == 0.0f) {
+                        grid.density[idx] = std::max(sumWeight, restDensity);
+                    }
+                    else grid.density[idx] = sumWeight;
+
+                    if (grid.s_field[idx] == 0.0f) {
+                        grid.type[idx] = CellType::Solid;
+                        grid.density[idx] = std::max(grid.density[idx], restDensity);
+                    } else if (sumWeight > 0.01f) {
                         grid.type[idx] = CellType::Fluid;
                     } else {
                         grid.type[idx] = CellType::Empty;
                     }
                 }
             }
+        }
+
+        float sum   = 0.0f;
+        int   count = 0;
+        for (int i = 0; i < data.grid.size(); ++i) {
+            if (data.grid.type[i] == CellType::Fluid) {
+                sum += data.grid.density[i];
+                count++;
+            }
+        }
+
+        if (count > 0) {
+            restDensity = sum / count;
+        } else {
+            restDensity = 1.0f;
         }
     }
 

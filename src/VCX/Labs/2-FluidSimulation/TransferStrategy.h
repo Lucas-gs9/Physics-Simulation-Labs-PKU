@@ -9,7 +9,7 @@ namespace VCX::Labs::Fluid {
         virtual void transferFromGrid(const Grid & grid, Particles & particles) = 0;
     };
 
-    class FlipStrategy:TransferStrategy {
+    class FlipStrategy : public TransferStrategy {
     public:
         float flipRatio = 0.95;
 
