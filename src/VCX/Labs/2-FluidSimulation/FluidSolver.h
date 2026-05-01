@@ -22,8 +22,8 @@ namespace VCX::Labs::Fluid {
         std::unique_ptr<IncompressibilityStrategy> iStrategy;
         std::unique_ptr<TransferStrategy>          tStrategy;
 
-        int   numSubSteps       = 4;
-        int   numParticleIters  = 3;
+        int   numSubSteps       = 3;
+        int   numParticleIters  = 2;
         int   numPressureIters  = 60;
         bool  separateParticles = true;
         float overRelaxation    = 1.2;
@@ -38,5 +38,6 @@ namespace VCX::Labs::Fluid {
         void handleParticleCollisions(glm::vec3 obstaclePos, float obstacleRad, glm::vec3 obstacleVel);
         void pushParticlesApart(int numIters);
         void updateParticleDensity();
+        void updateParticleColor();
     };
 }

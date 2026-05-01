@@ -17,8 +17,8 @@ namespace VCX::Labs::Fluid {
     CaseFLIP::CaseFLIP(std::initializer_list<Assets::ExampleScene> && scenes):
         _scenes(scenes),
         _program(
-            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/sphere_phong.vert"),
-                                        Engine::GL::SharedShader("assets/shaders/phong.frag") })),
+            Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/fluid.vert"),
+                                        Engine::GL::SharedShader("assets/shaders/fluid.frag") })),
         _lineprogram(
             Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/flat.vert"),
                                         Engine::GL::SharedShader("assets/shaders/flat.frag") })),
@@ -42,6 +42,7 @@ namespace VCX::Labs::Fluid {
         if (ImGui::Button(_stopped ? "Start Simulation" : "Stop Simulation"))
             _stopped = ! _stopped;
         ImGui::SliderFloat("FLIP Ratio", &_solver->flipRatio, 0.0f, 1.0f, "%.3f");
+        ImGui::SliderFloat("Time Scale", &_timeScale, 0.2f, 1.0f, "%.3f");
     }
     Common::CaseRenderResult CaseFLIP::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
         if (_recompute) {
@@ -51,7 +52,7 @@ namespace VCX::Labs::Fluid {
         }
 
         if (! _stopped)
-           _solver->step(Engine::GetDeltaTime());
+            _solver->step(_timeScale * Engine::GetDeltaTime());
 
         _BoundaryItem.UpdateVertexBuffer("position", Engine::make_span_bytes<glm::vec3>(vertex_pos));
         _frame.Resize(desiredSize);
@@ -80,7 +81,7 @@ namespace VCX::Labs::Fluid {
         _BoundaryItem.Draw({ _lineprogram.Use() });
         glLineWidth(1.f);
 
-        Rendering::ModelObject m        = Rendering::ModelObject(_sphere, _solver->data.particles.positions);
+        Rendering::ModelObject m        = Rendering::ModelObject(_sphere, _solver->data.particles.positions,_solver->data.particles.colors);
         auto const &           material = _sceneObject.Materials[0];
         m.Mesh.Draw({ material.Albedo.Use(), material.MetaSpec.Use(), material.Height.Use(), _program.Use() }, _sphere.Mesh.Indices.size(), 0, numofSpheres);
 
@@ -105,6 +106,6 @@ namespace VCX::Labs::Fluid {
         numofSpheres = _solver->data.particles.size();
 
         _stopped   = false; 
-        _recompute = true;
+        //_recompute = true;
     }
 }

@@ -22,6 +22,7 @@ namespace VCX::Labs::Fluid {
             iStrategy->solve(data.grid, numPressureIters, sdt, overRelaxation, compensateDrift, restDensity);
             tStrategy->transferFromGrid(data.grid, data.particles);
         }
+        updateParticleColor();
     }
 
     void HybridSolver::reset() {
@@ -32,7 +33,7 @@ namespace VCX::Labs::Fluid {
         auto & hash      = data.hash;
         
         //set up the scene
-        int       res = 16;
+        int       res = 18;
         glm::vec3 tankSize(1.0f);
         glm::vec3 waterRatio(0.6f, 0.8f, 0.6f);
 
@@ -293,6 +294,17 @@ namespace VCX::Labs::Fluid {
             restDensity = sum / count;
         } else {
             restDensity = 1.0f;
+        }
+    }
+
+    void HybridSolver::updateParticleColor() {
+        Particles & particles = data.particles;
+        for (int i = 0; i < particles.size(); ++i) {
+            float speed = glm::length(particles.velocities[i]);
+            float t     = glm::clamp(speed / 0.5f, 0.0f, 1.0f);
+            glm::vec3 coldColor(0.2f, 0.2f, 1.0f);
+            glm::vec3 hotColor(1.0f, 0.2f, 0.2f);
+            particles.colors[i] = glm::mix(coldColor, hotColor, t);
         }
     }
 

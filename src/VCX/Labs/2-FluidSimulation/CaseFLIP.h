@@ -38,6 +38,7 @@ namespace VCX::Labs::Fluid {
         Common::OrbitCameraManager          _cameraManager;
         int                                 numofSpheres;
         float                               _BndWidth { 2.0 };
+        float                               _timeScale { 1.0 };
 
         bool  _uniformDirty { true };
         int   _msaa { 2 };
