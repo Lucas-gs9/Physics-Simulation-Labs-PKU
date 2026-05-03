@@ -5,7 +5,7 @@ namespace VCX::Labs::Fluid {
 
     App::App():
         _ui(Labs::Common::UIOptions {}),
-        _caseFLIP({ Assets::ExampleScene::Fluid }){
+        _caseFluid({ Assets::ExampleScene::Fluid }){
     }
 
     void App::OnFrame() {

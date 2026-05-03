@@ -12,29 +12,34 @@
 #include "FluidSolver.h"
 
 namespace VCX::Labs::Fluid {
-    class CaseAPIC : public Common::ICase {
+    class CaseFluid : public Common::ICase {
     public:
-        CaseAPIC(std::initializer_list<Assets::ExampleScene> && scenes);
+        CaseFluid(std::initializer_list<Assets::ExampleScene> && scenes);
 
-        virtual std::string_view const GetName() override { return "APIC Fluid Simulation"; }
+        virtual std::string_view const GetName() override { return "FLIP Fluid Simulation"; }
 
         virtual void                     OnSetupPropsUI() override;
         virtual Common::CaseRenderResult OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) override;
         virtual void                     OnProcessInput(ImVec2 const & pos) override;
 
-        private:
+    private:
         std::unique_ptr<HybridSolver> _solver;
 
         std::vector<Assets::ExampleScene> const _scenes;
+        bool                                    _tstrategyChange { true };
+        bool                                    _istrategyChange { true };
+        int                                     _tId = 0;
+        int                                     _iId = 0;
 
         Engine::GL::UniqueProgram         _program;
         Engine::GL::UniqueProgram         _lineprogram;
         Engine::GL::UniqueRenderFrame     _frame;
         VCX::Labs::Rendering::SceneObject _sceneObject;
-        std::size_t                       _sceneIdx { 1 };
+        std::size_t                       _sceneIdx { 0 };
 
         Engine::GL::UniqueIndexedRenderItem _BoundaryItem;
         Engine::Model                       _sphere;
+        Engine::Model                       _obstacleSphere;
         Common::OrbitCameraManager          _cameraManager;
         int                                 numofSpheres;
         float                               _BndWidth { 2.0 };
@@ -52,7 +57,7 @@ namespace VCX::Labs::Fluid {
         bool _stopped { false };
         bool _recompute { true };
 
-        void                  ResetSystem();
+        void ResetSystem();
         Engine::Scene const & GetScene(std::size_t const i) const { return VCX::Labs::Rendering::Content::Scenes[std::size_t(_scenes[i])]; }
     };
 }

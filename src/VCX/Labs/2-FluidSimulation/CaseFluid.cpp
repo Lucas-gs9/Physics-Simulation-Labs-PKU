@@ -1,4 +1,4 @@
-#include "CaseFLIP.h"
+#include "CaseFluid.h"
 #include "Engine/app.h"
 
 namespace VCX::Labs::Fluid {
@@ -14,7 +14,7 @@ namespace VCX::Labs::Fluid {
     };
     const std::vector<std::uint32_t> line_index = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
     
-    CaseFLIP::CaseFLIP(std::initializer_list<Assets::ExampleScene> && scenes):
+    CaseFluid::CaseFluid(std::initializer_list<Assets::ExampleScene> && scenes):
         _scenes(scenes),
         _program(
             Engine::GL::UniqueProgram({ Engine::GL::SharedShader("assets/shaders/fluid.vert"),
@@ -37,7 +37,7 @@ namespace VCX::Labs::Fluid {
         _obstacleSphere           = Engine::Model { Engine::Sphere(12, 0.2f), 0 };
     }
 
-    void CaseFLIP::OnSetupPropsUI() {
+    void CaseFluid::OnSetupPropsUI() {
         const char * scNames[] = { "FLIP/PIC", "APIC" };
         if (ImGui::Combo("Set Simulator", &_tId, scNames, IM_ARRAYSIZE(scNames))) {
             _tstrategyChange = true;
@@ -64,7 +64,7 @@ namespace VCX::Labs::Fluid {
         if (!_solver->colorFromV)
             ImGui::ColorEdit3("Particle Color", glm::value_ptr(_solver->fixedColor));
     }
-    Common::CaseRenderResult CaseFLIP::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
+    Common::CaseRenderResult CaseFluid::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
         if (_recompute) {
             _recompute = false;
             _sceneObject.ReplaceScene(GetScene(_sceneIdx));
@@ -117,11 +117,11 @@ namespace VCX::Labs::Fluid {
         };
     }
 
-    void CaseFLIP::OnProcessInput(ImVec2 const & pos) {
+    void CaseFluid::OnProcessInput(ImVec2 const & pos) {
         _cameraManager.ProcessInput(_sceneObject.Camera, pos);
     }
 
-    void CaseFLIP::ResetSystem() {
+    void CaseFluid::ResetSystem() {
         if (_tstrategyChange) {
             if (_tId == 0)
                 _solver->tStrategy = std::make_unique<Fluid::FlipStrategy>();
