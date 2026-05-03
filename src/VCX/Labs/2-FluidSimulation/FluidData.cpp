@@ -184,7 +184,7 @@ namespace VCX::Labs::Fluid {
                     }
                 }
         }
-        return C * (4.f / (h * h)) * 0.9f;
+        return C * (4.f / (h * h)) * 1.f;
     }
 
     int Grid::size() const{

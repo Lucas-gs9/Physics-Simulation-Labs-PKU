@@ -60,4 +60,19 @@ namespace VCX::Labs::Fluid {
         }
         return sum;
     }
+
+    inline float poly6(float rSq, float h) {
+        float hSq = h * h;
+        if (rSq < 0 || rSq > hSq) return 0.0f;
+        float term = hSq - rSq;
+        return (315.0f / (64.0f * 3.14 * pow(h, 9))) * term * term * term;
+    }
+
+    inline glm::vec3 gradSpiky(glm::vec3 r, float h) {
+        float rLen = glm::length(r);
+        if (rLen <= 0.0f || rLen >= h) return glm::vec3(0.0f);
+        float factor = -45.0f / (3.14 * pow(h, 6));
+        float term   = h - rLen;
+        return (factor * term * term) * (r / rLen);
+    }
 }

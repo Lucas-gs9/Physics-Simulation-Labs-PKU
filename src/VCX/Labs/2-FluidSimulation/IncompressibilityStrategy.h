@@ -38,6 +38,6 @@ namespace VCX::Labs::Fluid {
 
     private:
         Eigen::SparseMatrix<float> A;
-        Eigen::ConjugateGradient<Eigen::SparseMatrix<float>, Eigen::Lower | Eigen::Upper, Eigen::DiagonalPreconditioner<float>> solver;
+        Eigen::ConjugateGradient<Eigen::SparseMatrix<float>, Eigen::Lower | Eigen::Upper, Eigen::IncompleteCholesky<float>> solver;
     };
 }

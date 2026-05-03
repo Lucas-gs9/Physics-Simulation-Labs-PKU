@@ -2,7 +2,7 @@
 
 namespace VCX::Labs::Fluid {
     void GaussSiedelStrategy::solve(Grid& grid, int numIters, float dt, float overRelaxation, bool compensateDrift, float restDensity) {
-        float stiffness = 0.05f;
+        float stiffness = 0.01f;
 
         for (int iter = 0; iter < numIters; ++iter) {
             for (int color = 0; color <= 1; ++color) {
@@ -104,7 +104,7 @@ namespace VCX::Labs::Fluid {
             solver.compute(A);
         }
 
-        float stiffness = 0.05f;
+        float stiffness = 0.01f;
         Eigen::VectorXf b         = Eigen::VectorXf::Zero(n);
         #pragma omp parallel for collapse(3)
         for (int i = 0; i < nx; ++i) {
@@ -116,7 +116,7 @@ namespace VCX::Labs::Fluid {
                     float div = (grid.u[grid.uIdx(i + 1, j, k)] - grid.u[grid.uIdx(i, j, k)] + grid.v[grid.vIdx(i, j + 1, k)] - grid.v[grid.vIdx(i, j, k)] + grid.w[grid.wIdx(i, j, k + 1)] - grid.w[grid.wIdx(i, j, k)]) / dt;
 
                     if (compensateDrift && grid.density[centerIdx] > restDensity) {
-                        //div -= (stiffness * (grid.density[centerIdx] - restDensity)) / dt;
+                        div -= (stiffness * (grid.density[centerIdx] - restDensity)) / dt;
                     }
                     b[centerIdx] = -div;
                 }

@@ -39,6 +39,7 @@ namespace VCX::Labs::Fluid {
 
         Engine::GL::UniqueIndexedRenderItem _BoundaryItem;
         Engine::Model                       _sphere;
+        Engine::Model                       _obstacleSphere;
         Common::OrbitCameraManager          _cameraManager;
         int                                 numofSpheres;
         float                               _BndWidth { 2.0 };

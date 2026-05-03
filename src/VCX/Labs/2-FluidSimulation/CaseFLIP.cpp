@@ -3,14 +3,14 @@
 
 namespace VCX::Labs::Fluid {
     const std::vector<glm::vec3> vertex_pos = {
-        glm::vec3(0.04f, 0.04f, 0.04f),
-        glm::vec3(0.96f, 0.04f, 0.04f),
-        glm::vec3(0.96f, 0.96f, 0.04f),
-        glm::vec3(0.04f, 0.96f, 0.04f),
-        glm::vec3(0.04f, 0.04f, 0.96f),
-        glm::vec3(0.96f, 0.04f, 0.96f),
-        glm::vec3(0.96f, 0.96f, 0.96f),
-        glm::vec3(0.04f, 0.96f, 0.96f)
+        glm::vec3(0.f, 0.f, 0.f),
+        glm::vec3(1.f, 0.f, 0.f),
+        glm::vec3(1.f, 1.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 0.f, 1.f),
+        glm::vec3(1.f, 0.f, 1.f),
+        glm::vec3(1.f, 1.f, 1.f),
+        glm::vec3(0.f, 1.f, 1.f)
     };
     const std::vector<std::uint32_t> line_index = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
     
@@ -34,6 +34,7 @@ namespace VCX::Labs::Fluid {
         ResetSystem();
         _sphere = Engine::Model { Engine::Sphere(6, _solver->data.particles.radius), 0 };
         _cameraManager.AutoRotate = false;
+        _obstacleSphere           = Engine::Model { Engine::Sphere(12, 0.2f), 0 };
     }
 
     void CaseFLIP::OnSetupPropsUI() {
@@ -53,8 +54,15 @@ namespace VCX::Labs::Fluid {
             _stopped = ! _stopped;
         if (_tId==0)
             ImGui::SliderFloat("FLIP Ratio", &(static_cast<FlipStrategy *>(_solver->tStrategy.get()))->flipRatio, 0.0f, 1.0f, "%.3f");
-        ImGui::SliderFloat("Time Scale", &_timeScale, 0.5f, 1.0f, "%.3f");
+        ImGui::SliderFloat("Time Scale", &_timeScale, 0.5f, 1.0f, "%.2f");
+        ImGui::SliderFloat("Gravity", &_solver->gravity.y, 0.f, 1.0f, "%.2f");
         ImGui::Checkbox("Compensate Drift", &_solver->compensateDrift);
+        ImGui::Checkbox("Experimental: Use IDP", &_solver->useIDP);
+        if (_iId==0)
+            ImGui::SliderFloat("Overrelaxation", &_solver->overRelaxation, 1.f, 1.9f, "%.3f");
+        ImGui::Checkbox("Use Velocity Color", &_solver->colorFromV);
+        if (!_solver->colorFromV)
+            ImGui::ColorEdit3("Particle Color", glm::value_ptr(_solver->fixedColor));
     }
     Common::CaseRenderResult CaseFLIP::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
         if (_recompute) {
