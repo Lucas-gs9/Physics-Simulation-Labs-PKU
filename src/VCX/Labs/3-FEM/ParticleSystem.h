@@ -6,6 +6,7 @@ namespace VCX::Labs::FEM {
 	class ParticleSystem {
     public:
         std::vector<glm::vec3> x;
+        std::vector<glm::vec3> x_rest;
         std::vector<glm::vec3> v;
         std::vector<glm::vec3> f; 
 
@@ -26,5 +27,6 @@ namespace VCX::Labs::FEM {
         void resize(int n);
         void addMass(int id, float m_val);
         void updateMass();
+        void reset();
 	};
 }

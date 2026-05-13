@@ -11,6 +11,7 @@ namespace VCX::Labs::FEM {
     class TetMesh {
     public:
         std::vector<Element> elements;
+        std::vector<std::uint32_t> surfaceTriangles;
 
         float mu, lambda, rho;
 
@@ -20,6 +21,7 @@ namespace VCX::Labs::FEM {
 
     private:
         void addTet(ParticleSystem & ps, int i0, int i1, int i2, int i3);
+        void extractSurface();
 
         glm::mat3 calculateStressP(const glm::mat3 & F);
     };

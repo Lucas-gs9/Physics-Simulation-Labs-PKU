@@ -1,11 +1,12 @@
 #include "ParticleSystem.h"
+#include <iostream>
 
 namespace VCX::Labs::FEM {
     void ParticleSystem::clearForces(const glm::vec3& gravity) {
 #pragma omp parallel for
         for (int i = 0; i < size; ++i) {
             if (is_fixed[i]) f[i] = glm::vec3(0);
-            else f[i] = mass[i] * gravity;
+            else f[i] = mass[i] * (-gravity);
         }
     }
 
@@ -47,5 +48,12 @@ namespace VCX::Labs::FEM {
             if (mass[i] > 1e-9f) inv_m[i] = 1.0f / mass[i];
             else inv_m[i] = 0.0f;
         }
+        x_rest = x;
+    }
+
+    void ParticleSystem::reset() {
+        x = x_rest; 
+        std::fill(v.begin(), v.end(), glm::vec3(0.0f));
+        std::fill(f.begin(), f.end(), glm::vec3(0.0f));
     }
 }

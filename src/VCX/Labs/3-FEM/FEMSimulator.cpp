@@ -1,4 +1,5 @@
 #include "FEMSimulator.h"
+#include <iostream>
 
 namespace VCX::Labs::FEM {
     void FEMSimulator::init() {
@@ -8,12 +9,13 @@ namespace VCX::Labs::FEM {
 
         mesh.mu = E / (2.0f * (1.0f + nu));
         mesh.lambda = (E * nu) / ((1.0f + nu) * (1.0f - 2.0f * nu));
+        mesh.rho    = rho;
 
-        mesh.initialize(ps, 32, 8, 8, 0.25f);
+        mesh.initialize(ps, 16, 4, 4, 0.5f);
     }
 
-    void FEMSimulator::update() {
-        int   subSteps = 5;
+    void FEMSimulator::update(float dt) {
+        int   subSteps = 80;
         float sdt      = dt / subSteps;
         for (int i = 0; i < subSteps; ++i) {
             step(sdt);
@@ -23,6 +25,10 @@ namespace VCX::Labs::FEM {
     void FEMSimulator::step(float dt) {
         ps.clearForces(gravity);
         mesh.computeForces(ps);
-        ps.step(dt);
+        ps.step(dt, 0.999f);
+    }
+
+    void FEMSimulator::reset() {
+        ps.reset();
     }
 }

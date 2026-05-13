@@ -8,11 +8,11 @@ namespace VCX::Labs::FEM {
         ParticleSystem ps;
         TetMesh        mesh;
 
-        float dt = 0.001f;
-        glm::vec3 gravity = glm::vec3(0.0f, -0.05f, 0.0f);
+        glm::vec3 gravity = glm::vec3(0.0f, 0.05f, 0.0f);
 
         void init();
-        void update();
+        void update(float dt);
+        void reset();
 
     private:
         void step(float dt);

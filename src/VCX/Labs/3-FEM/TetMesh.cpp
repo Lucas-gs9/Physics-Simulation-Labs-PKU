@@ -1,5 +1,6 @@
 #include "TetMesh.h"
-
+#include <map>
+#include <algorithm>
 namespace VCX::Labs::FEM {
     void TetMesh::initialize(ParticleSystem& ps, int nx, int ny, int nz, float delta) {
         int n  = (nx + 1) * (ny + 1) * (nz + 1);
@@ -28,23 +29,19 @@ namespace VCX::Labs::FEM {
                     int v6 = ps.getID(i + 1, j + 1, k + 1, ny, nz);
                     int v7 = ps.getID(i, j + 1, k + 1, ny, nz);
 
-                    if ((i + j + k) % 2 == 0) {
-                        addTet(ps, v0, v1, v2, v5);
-                        addTet(ps, v0, v2, v3, v7);
-                        addTet(ps, v0, v5, v7, v4);
-                        addTet(ps, v2, v5, v7, v6);
-                        addTet(ps, v0, v2, v5, v7); 
-                    } else {
-                        addTet(ps, v1, v0, v3, v4);
-                        addTet(ps, v1, v3, v2, v6);
-                        addTet(ps, v1, v6, v4, v5);
-                        addTet(ps, v3, v6, v4, v7);
-                        addTet(ps, v1, v3, v6, v4);
-                    }
+                    addTet(ps, v0, v1, v2, v6);
+                    addTet(ps, v0, v2, v3, v6);
+                    addTet(ps, v0, v3, v7, v6);
+                    addTet(ps, v0, v7, v4, v6);
+                    addTet(ps, v0, v4, v5, v6);
+                    addTet(ps, v0, v5, v1, v6);
                 }
             }
         }
 
+        ps.updateMass();
+
+        extractSurface();
     }
 
     void TetMesh::addTet(ParticleSystem& ps, int i0, int i1, int i2, int i3) {
@@ -67,8 +64,6 @@ namespace VCX::Labs::FEM {
         for (int i = 0; i < 4; ++i) {
             ps.addMass(tet.indices[i], nodeMass);
         }
-
-        ps.updateMass();
 
         elements.push_back(tet);
     }
@@ -103,4 +98,33 @@ namespace VCX::Labs::FEM {
         glm::mat3 S = 2.0f * mu * G + lambda * trG * glm::mat3(1.0f);
         return F * S;
     }
+
+    void TetMesh::extractSurface() {
+        surfaceTriangles.clear();
+
+        std::map<std::vector<int>, int> faceCounts;
+
+        for (const auto & tet : elements) {
+            int faces[4][3] = {
+                {tet.indices[0], tet.indices[1], tet.indices[2]},
+                {tet.indices[0], tet.indices[1], tet.indices[3]},
+                {tet.indices[0], tet.indices[2], tet.indices[3]},
+                {tet.indices[1], tet.indices[2], tet.indices[3]}
+            };
+            for (auto & f : faces) {
+                std::vector<int> face = { f[0], f[1], f[2] };
+                std::sort(face.begin(), face.end());
+                faceCounts[face]++;
+            }
+        }
+
+        for (auto const & [face, count] : faceCounts) {
+            if (count == 1) {
+                surfaceTriangles.push_back(face[0]);
+                surfaceTriangles.push_back(face[1]);
+                surfaceTriangles.push_back(face[2]);
+            }
+        }
+    }
+
 }
