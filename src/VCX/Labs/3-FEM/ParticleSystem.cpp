@@ -11,7 +11,14 @@ namespace VCX::Labs::FEM {
     }
 
     void ParticleSystem::addForce(int id, const glm::vec3& f_val) {
-        if (! is_fixed[id]) f[id] += f_val;
+        if (!is_fixed[id]) {
+#pragma omp atomic
+            f[id].x += f_val.x;
+#pragma omp atomic
+            f[id].y += f_val.y;
+#pragma omp atomic
+            f[id].z += f_val.z;
+        }
     }
 
     void ParticleSystem::step(float dt, float damp) {
@@ -44,6 +51,7 @@ namespace VCX::Labs::FEM {
     }
 
     void ParticleSystem::updateMass() {
+#pragma omp parallel for
         for (int i = 0; i < size; ++i) {
             if (mass[i] > 1e-9f) inv_m[i] = 1.0f / mass[i];
             else inv_m[i] = 0.0f;

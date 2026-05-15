@@ -9,6 +9,8 @@
 #include "Labs/Common/OrbitCameraManager.h"
 #include "Labs/Scene/Content.h"
 #include "Labs/Scene/SceneObject.h"
+#include "utils.h"
+
 
 namespace VCX::Labs::FEM {
     class CaseFEM : public Common::ICase {
@@ -30,9 +32,30 @@ namespace VCX::Labs::FEM {
         Common::OrbitCameraManager    _cameraManager;
         Engine::GL::UniqueRenderItem        _verticesItem; 
         Engine::GL::UniqueIndexedRenderItem _linesItem; 
+        Engine::GL::UniqueIndexedRenderItem _rbItem;
         float                               _vertexSize { 5 };
         float                               _lineWidth { 0.5f };
+        std::vector<glm::vec3>              _rbPositions {
+            glm::vec3(0.0f, -2.5f, -8.0f), 
+            glm::vec3(0.0f, -2.5f, 8.0f), 
+            glm::vec3(0.0f, 5.0f, 8.0f),   
+            glm::vec3(0.0f, 5.0f, -8.0f),  
+
+            glm::vec3(0.0f, -2.5f, -8.0f),  
+            glm::vec3(10.0f, -2.5f, -8.0f), 
+            glm::vec3(10.0f, -2.5f, 8.0f),  
+            glm::vec3(0.0f, -2.5f, 8.0f)
+        };
 
         bool _stopped { false };
+        bool _controlCamera = true;
+        bool _isDragging { false };
+
+        int                                     _selectedId;
+        int                                     _mId = 0;
+        std::pair<std::uint32_t, std::uint32_t> _windowSize;
+        float                                   _strength = 30.f;
+
+        void applyDragging();
     };
 }
