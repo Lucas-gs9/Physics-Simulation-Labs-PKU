@@ -20,14 +20,14 @@ namespace VCX::Labs::FEM {
     }
 
     void FEMSimulator::update(float dt) {
-        handleCollision();
         mesh.computeForces(ps, dt, mdId, useEP);
-        ps.step(dt, 0.999f);
+        handleCollision();
+        ps.step(dt, 0.9988f);
     }
 
     void FEMSimulator::handleCollision() {
         float k_penalty = 5000.0f; 
-        float c_damping = 10.0f;
+        float c_damping = 12.0f;
 #pragma omp parallel for
         for (int i = 0; i < ps.size; ++i) {
             glm::vec3 & x = ps.x[i];

@@ -82,9 +82,9 @@ namespace VCX::Labs::FEM {
     }
 
     glm::mat3 getInverseFromSVD(const glm::mat3& U, const glm::vec3& sigma, const glm::mat3& V) {
-        float s0 = (std::abs(sigma[0]) > 1e-9f) ? 1.0f / sigma[0] : 0.0f;
-        float s1 = (std::abs(sigma[1]) > 1e-9f) ? 1.0f / sigma[1] : 0.0f;
-        float s2 = (std::abs(sigma[2]) > 1e-9f) ? 1.0f / sigma[2] : 0.0f;
+        float s0 = (std::abs(sigma[0]) > 1e-6f) ? 1.0f / sigma[0] : 0.0f;
+        float s1 = (std::abs(sigma[1]) > 1e-6f) ? 1.0f / sigma[1] : 0.0f;
+        float s2 = (std::abs(sigma[2]) > 1e-6f) ? 1.0f / sigma[2] : 0.0f;
 
         glm::mat3 Sigma_inv = glm::mat3(0.0f);
         Sigma_inv[0][0]     = s0;

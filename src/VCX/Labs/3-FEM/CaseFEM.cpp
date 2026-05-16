@@ -65,22 +65,25 @@ namespace VCX::Labs::FEM {
         ImGui::SameLine();
         if (ImGui::RadioButton("Apply Force", ! _controlCamera)) _controlCamera = false;
         if (! _controlCamera) {
-            ImGui::SliderFloat("Drag Force", &_strength, 0.f, 50.f, "%.0f");
+            ImGui::SliderFloat("Drag Force", &_strength, 200.f, 500.f, "%.0f");
         }
     }
 
     Common::CaseRenderResult CaseFEM::OnRender(std::pair<std::uint32_t, std::uint32_t> const desiredSize) {
         if (!_stopped) {
 
-            int   subSteps = 50;
+            int   subSteps = 60;
             if (_mId == 1) subSteps = 30;
-            else if (_mId == 2) subSteps = 20;
+            else if (_mId == 2) subSteps = 25;
             float sdt      = Engine::GetDeltaTime() / subSteps;
+            ImVec2 delta = ImGui::GetIO().MouseDelta;
+            float  s        = (float) subSteps;
+            ImVec2 subDelta = ImVec2(delta.x / s, delta.y / s);
 
             for (int i = 0; i < subSteps; ++i) {
                 _simulator.ps.clearForces(_simulator.gravity);
                 if (_isDragging)
-                    applyDragging();
+                    applyDragging(subDelta);
                 _simulator.update(sdt);
             }
         }
@@ -138,8 +141,7 @@ namespace VCX::Labs::FEM {
         }
     }
 
-    void CaseFEM::applyDragging() {
-        ImVec2    delta    = ImGui::GetIO().MouseDelta;
+    void CaseFEM::applyDragging(ImVec2 delta) {
         glm::mat4 invView  = glm::inverse(_camera.GetViewMatrix());
         glm::vec3 camRight = glm::vec3(invView[0]);
         glm::vec3 camUp    = glm::vec3(invView[1]);
@@ -161,10 +163,6 @@ namespace VCX::Labs::FEM {
 
                 glm::vec3 relativeVel      = _simulator.ps.v[i];
                 glm::vec3 interactionForce = (forceDir * _strength - relativeVel * damping) * weight;
-                float     maxF             = 4000.0f; 
-                if (glm::length(interactionForce) > maxF) {
-                    interactionForce = glm::normalize(interactionForce) * maxF;
-                }
                 
                 _simulator.ps.addForce(i, interactionForce);
             }

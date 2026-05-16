@@ -54,8 +54,8 @@ namespace VCX::Labs::FEM {
         int                                     _selectedId;
         int                                     _mId = 0;
         std::pair<std::uint32_t, std::uint32_t> _windowSize;
-        float                                   _strength = 30.f;
+        float                                   _strength = 300.f;
 
-        void applyDragging();
+        void applyDragging(ImVec2 delta);
     };
 }

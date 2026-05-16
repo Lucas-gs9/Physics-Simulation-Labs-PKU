@@ -98,14 +98,19 @@ namespace VCX::Labs::FEM {
                 svd(Fe, U, sigma, V);
                 glm::vec3 sigma_new;
                 for (int i = 0; i < 3; i++) {
-                    sigma_new[i] = std::clamp(sigma[i], 0.9f, 1.1f);
+                    if (sigma[i] < 0) {
+                        sigma_new[i] = -std::clamp(std::abs(sigma[i]), 0.8f, 1.2f);
+                    } else {
+                        sigma_new[i] = std::clamp(sigma[i], 0.8f, 1.2f);
+                    }
                 }
                 glm::mat3 Sigma_mat = glm::mat3(
                     sigma_new[0], 0.0f, 0.0f, 0.0f, sigma_new[1], 0.0f, 0.0f, 0.0f, sigma_new[2]);
                 Fe            = U * Sigma_mat * glm::transpose(V);
                 glm::mat3 F_dot = (F - e.F_prev) / dt;
 
-                glm::mat3 Fe_inv    = getInverseFromSVD(U, sigma_new, V);
+                glm::mat3 Fe_inv = getInverseFromSVD(U, sigma_new, V);
+
                 e.Fp                = Fe_inv * F;
                 glm::mat3 P_elastic = calculateStressP(Fe, model);
                 P         = P_elastic + eta * F_dot;

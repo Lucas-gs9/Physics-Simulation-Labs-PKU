@@ -27,6 +27,13 @@ namespace VCX::Labs::FEM {
             if (is_fixed[i]) continue;
             v[i] += f[i] * inv_m[i] * dt;
             v[i] *= damp;
+
+            float speed     = glm::length(v[i]);
+            float max_speed = 20.0f; 
+            if (speed > max_speed) {
+                v[i] *= (max_speed / speed);
+            }
+
             x[i] += v[i] * dt;
         }
     }
